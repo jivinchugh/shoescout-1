@@ -7,7 +7,7 @@ Communication
 -   We will use Discord and WhatsApp for quick updates and questions.
 -   Important discussions and decisions will be documented in GitHub Issues or a shared document.
 -   Team members will respond to messages within 24 hours during weekdays.
--   We will meet virtually once or twice a week at a mutually agreed time.
+-   We will meet virtually on wednesdays at 8pm, and in-person on fridays at 5pm.
 -   Each meeting will have an agenda, and notes will be documented.
 -   All team members are expected to attend meetings or notify the group in advance if unable to do so.
 
