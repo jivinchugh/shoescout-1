@@ -1,7 +1,7 @@
 # Definition of Done
 
 ## Requirements
-- [ ] All user stories and acceptance criteria are fulfilled.
+- [ ] User stories for a particular task/feature and its relative acceptance criteria are fulfilled.
 - [ ] Any changes to requirements are documented and approved.
 
 ## Development
