@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "main": "index.js",
   "scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
-  "lint": "eslint \"./src/**/*.js\""
-},
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint \"./src/**/*.js\""
+  },
   "keywords": [],
   "author": "Group-11 (Jivin Chugh, Amitoj Uppal, Nand Patel, Madhav Rajpal)",
   "license": "ISC",
@@ -16,5 +16,10 @@
     "eslint-plugin-react": "^7.37.4",
     "globals": "^15.15.0",
     "prettier": "3.5.1"
+  },
+  "dependencies": {
+    "pino": "^9.6.0",
+    "pino-http": "^10.4.0",
+    "pino-pretty": "^13.0.0"
   }
 }
