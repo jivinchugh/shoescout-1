@@ -8,5 +8,8 @@
   "keywords": [],
   "author": "Group-11 (Jivin Chugh, Amitoj Uppal, Nand Patel, Madhav Rajpal)",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "prettier": "3.5.1"
+  }
 }
