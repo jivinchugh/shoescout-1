@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const { createUser, getUser } = require('./models/user');
 
 // author and version from our package.json file
 // TODO: make sure you have updated your name in the `author` section
@@ -30,6 +31,9 @@ app.use(cors());
 // Use gzip/deflate compression middleware
 app.use(compression());
 
+// Use express middleware to parse JSON bodies
+app.use(express.json());
+
 // Define a simple health check route. If the server is running
 // we'll respond with a 200 OK.  If not, the server isn't healthy.
 app.get('/', (req, res) => {
@@ -45,6 +49,32 @@ app.get('/', (req, res) => {
     githubUrl: 'https://github.com/CAPSTONE-2025/Group_11',
     version,
   });
+});
+
+app.post('/users', async (req, res) => {
+  const { username, shoeSize } = req.body;
+  try {
+    const user = await createUser(username, shoeSize);
+    res.status(201).json(user);
+  } catch (err) {
+    logger.error('Error creating user', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/users/:username', async (req, res) => {
+  const { username } = req.params;
+  try {
+    const user = await getUser(username);
+    if (user) {
+      res.status(200).json(user);
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (err) {
+    logger.error('Error fetching user', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // Add 404 middleware to handle any requests for resources that can't be found
