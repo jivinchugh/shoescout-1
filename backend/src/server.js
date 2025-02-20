@@ -9,16 +9,42 @@ const logger = require('./logger');
 // Get our express app instance
 const app = require('./app');
 
+const mongoose = require('mongoose');
+require('dotenv').config(); // Load environment variables
+
 // Get the desired port from the process' environment. Default to `8080`
 const port = parseInt(process.env.PORT || '8080', 10);
+const mongoURI = process.env.MONGO_URI;
 
-// Start a server listening on this port
-const server = stoppable(
-  app.listen(port, () => {
-    // Log a message that the server has started, and which port it's using.
-    logger.info(`Server started on port ${port}`);
-  })
-);
+// MongoDB Atlas Connection
+const connectDB = async () => {
+  try {
+    await mongoose.connect(mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    logger.info('MongoDB Connected Successfully');
+  } catch (error) {
+    logger.error('MongoDB Connection Error:', error);
+    process.exit(1); // Exit process on failure
+  }
+};
 
-// Export our server instance so other parts of our code can access it if necessary.
-module.exports = server;
+// Start the server
+connectDB().then(() => {
+  const server = stoppable(
+    app.listen(port, () => {
+      logger.info(`Server running on port ${port}`);
+    })
+  );
+
+  // Gracefully shutdown the server
+  process.on('SIGINT', async () => {
+    logger.info('Gracefully shutting down...');
+    await mongoose.connection.close();
+    server.close(() => {
+      logger.info('Server closed');
+      process.exit(0);
+    });
+  });
+});
