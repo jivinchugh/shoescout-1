@@ -1,13 +1,12 @@
-// src/app.js
-
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const { createUser, getUser } = require('./models/user');
+const axios = require('axios');
 
 // author and version from our package.json file
-// TODO: make sure you have updated your name in the `author` section
+// TODO: make sure you have updated your name in the author section
 const { author, version } = require('../package.json');
 
 const logger = require('./logger');
@@ -35,7 +34,7 @@ app.use(compression());
 app.use(express.json());
 
 // Define a simple health check route. If the server is running
-// we'll respond with a 200 OK.  If not, the server isn't healthy.
+// we'll respond with a 200 OK. If not, the server isn't healthy.
 app.get('/', (req, res) => {
   // Clients shouldn't cache this response (always request it fresh)
   // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#controlling_caching
@@ -77,38 +76,62 @@ app.get('/users/:username', async (req, res) => {
   }
 });
 
-// Add 404 middleware to handle any requests for resources that can't be found
-app.use((req, res) => {
-  res.status(404).json({
-    status: 'error',
-    error: {
-      message: 'not found',
-      code: 404,
+// StockX API endpoint - moved before error handling middleware
+app.get('/shoes/:query', async (req, res) => {
+  const { query } = req.params;
+  
+  const formattedQuery = query.replace(/-/g, ' ');
+
+  const options = {
+    method: 'GET',
+    url: 'https://stockx-api.p.rapidapi.com/search',
+    params: {
+      query: formattedQuery,
+      page: 1
     },
-  });
-});
+    headers: {
+      'Accept': 'application/json',
+      'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
+      'X-RapidAPI-Host': process.env.STOCKX_API_HOST,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+    }
+  };
 
-// Add error-handling middleware to deal with anything else
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  // We may already have an error response we can use, but if not,
-  // use a generic `500` server error and message.
-  const status = err.status || 500;
-  const message = err.message || 'unable to process request';
+  try {
+    console.log('Making request for:', formattedQuery);
+    const response = await axios.request(options);
+    console.log('Response status:', response.status);
+    console.log('Response data:', JSON.stringify(response.data, null, 2));
 
-  // If this is a server error, log something so we can see what's going on.
-  if (status > 499) {
-    logger.error({ err }, `Error processing request`);
+    if (!response.data || response.data.estimatedTotalHits === 0 || !response.data.hits) {
+      console.log('No results found');
+      return res.status(404).json({ error: 'No shoes found for the given query' });
+    }
+
+    const products = response.data.hits;
+    if (products.length === 0) {
+      return res.status(404).json({ error: 'No shoes found' });
+    }
+
+    const shoe = products[0];
+
+    res.json({
+      title: shoe.title || 'No title available',
+      description: shoe.description || 'No description available',
+      retail_price: shoe.retail_price || 'N/A',
+      market_price: shoe.market?.price || 'N/A',
+      brand: shoe.brand || 'N/A',
+      image_url: shoe.image || null
+    });
+
+  } catch (error) {
+    console.error('Error details:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch shoes data',
+      details: error.message
+    });
   }
-
-  res.status(status).json({
-    status: 'error',
-    error: {
-      message,
-      code: status,
-    },
-  });
 });
 
-// Export our `app` so we can access it in server.js
+// Export our app so we can access it in server.js
 module.exports = app;
