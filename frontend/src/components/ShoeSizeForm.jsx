@@ -8,22 +8,27 @@ const ShoeSizeForm = () => {
   const [loading, setLoading] = useState(false);
   const [currentShoeSize, setCurrentShoeSize] = useState(null);
 
+  // When making fetch requests, ensure the URL is correctly formed
+  const apiUrl = import.meta.env.VITE_API_URL.endsWith('/') 
+    ? `${import.meta.env.VITE_API_URL}api/shoe-size`
+    : `${import.meta.env.VITE_API_URL}/api/shoe-size`;
+
   // Fetch the user's current shoe size when component loads
   useEffect(() => {
     const fetchShoeSize = async () => {
       if (!isAuthenticated) return;
-
+  
       try {
         setLoading(true);
         const token = await getAccessTokenSilently();
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/shoe-size`, {
+        const response = await fetch(apiUrl, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
-
+  
         if (response.ok) {
           const data = await response.json();
           setCurrentShoeSize(data.shoeSize);
@@ -34,9 +39,9 @@ const ShoeSizeForm = () => {
         setLoading(false);
       }
     };
-
+  
     fetchShoeSize();
-  }, [isAuthenticated, getAccessTokenSilently]);
+  }, [isAuthenticated, getAccessTokenSilently, apiUrl]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,7 +62,7 @@ const ShoeSizeForm = () => {
       setMessage("");
       
       const token = await getAccessTokenSilently();
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/shoe-size`, {
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
