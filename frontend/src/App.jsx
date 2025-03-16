@@ -5,6 +5,7 @@ import LoginButton from "./components/auth/LoginButton";
 import LogoutButton from "./components/auth/LogoutButton";
 import Profile from "./components/auth/Profile";
 import ShoeSizeForm from "./components/ShoeSizeForm"; // Import the new component
+import LandingPage from "./components/LandingPage";
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth0();
@@ -22,11 +23,11 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
+      <div className="flex items-center justify-center h-screen bg-white-100">
         <div className="text-center">
           <p className="text-xl">Loading...</p>
           {loadingTooLong && (
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-white-500 mt-2">
               This is taking longer than expected. Please check your internet connection.
             </p>
           )}
@@ -36,15 +37,15 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-white-100 p-4 w-full">
       <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md mb-6">
-        <h1 className="text-2xl font-bold text-center mb-4">Auth0 Demo</h1>
-
-        <div className="flex justify-center space-x-4 mb-6">
-          {!isAuthenticated ? <LoginButton /> : <LogoutButton />}
+    
+        {!isAuthenticated ?  <LandingPage /> :  <Profile />}
+        <footer className="border-t w-full py-4">
+        <div className=" flex items-center justify-between px-4 md:px-6">
+          <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Capstone Store</p>
         </div>
-
-        {isAuthenticated && <Profile />}
+      </footer>
       </div>
 
       {/* Add the ShoeSizeForm component when user is authenticated */}
@@ -53,9 +54,9 @@ function App() {
           <ShoeSizeForm />
         </div>
       )}
-
-      <TestComponent />
+      
     </div>
+    
   );
 }
 
