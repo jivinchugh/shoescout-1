@@ -259,16 +259,6 @@ export default function ShoeSearch() {
                       You save {calculateSavings(selectedShoe.retail_price, selectedShoe.market_price)} off retail price!
                     </div>
                   )}
-                <div className="action-buttons">
-                  <button className="add-to-cart">
-                    <ShoppingBag className="button-icon" />
-                    Add to Cart
-                  </button>
-                  <button className="save-for-later">
-                    <Heart className="button-icon" />
-                    Save for Later
-                  </button>
-                </div>
               </div>
             </div>
           </div>
