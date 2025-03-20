@@ -186,7 +186,6 @@ export default function ShoeSearch() {
                 <p className="shoe-brand">
                   <Tag className="brand-icon" /> {shoe.brand}
                 </p>
-                {/* Description removed from normal card */}
                 <div className="price-section">
                   <div>
                     <span className="retail-price">Retail Price: </span>
@@ -196,14 +195,6 @@ export default function ShoeSearch() {
                     <span className="user-size">Your Size: </span>
                     <span className="user-size">{shoe.user_size}</span>
                   </div>
-                </div>
-                <div className="market-price">
-                  <span>Market Price:</span>
-                  <span className="price-value">{formatPrice(shoe.market_price)}</span>
-                </div>
-                <div className="buy-now-price">
-                  <span>Buy Now:</span>
-                  <span className="price-value">{formatPrice(shoe.buy_now_price)}</span>
                 </div>
               </div>
             </div>
@@ -233,20 +224,14 @@ export default function ShoeSearch() {
                 <p className="shoe-brand">
                   <Tag className="brand-icon" /> {selectedShoe.brand}
                 </p>
-                {/* Show description in detail view */}
-                <p className="shoe-description">{selectedShoe.description || "No description available"}</p>
+                <p
+                  className="shoe-description"
+                  dangerouslySetInnerHTML={{ __html: selectedShoe.description || "No description available" }}
+                />
                 <div className="price-grid">
                   <div className="price-item">
                     <span>Retail Price</span>
                     <span>{formatPrice(selectedShoe.retail_price)}</span>
-                  </div>
-                  <div className="price-item">
-                    <span>Market Price</span>
-                    <span>{formatPrice(selectedShoe.market_price)}</span>
-                  </div>
-                  <div className="price-item">
-                    <span>Buy Now Price</span>
-                    <span>{formatPrice(selectedShoe.buy_now_price)}</span>
                   </div>
                   <div className="price-item">
                     <span>Your Size</span>
@@ -259,6 +244,12 @@ export default function ShoeSearch() {
                       You save {calculateSavings(selectedShoe.retail_price, selectedShoe.market_price)} off retail price!
                     </div>
                   )}
+                <div className="action-buttons">
+                  <button className="add-to-favorites">
+                    <Heart className="button-icon" />
+                    Add to Favorites
+                  </button>
+                </div>
               </div>
             </div>
           </div>
