@@ -1,67 +1,189 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #fbfafa;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@import url('https://rsms.me/inter/inter.css');
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #080707;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+@layer base {
   :root {
-    color: #f7f9fb;
-    background-color: #ffffff;
+    /* Light theme */
+    --background: 250 25% 98%;
+    --foreground: 252 10% 15%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 252 10% 15%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 252 10% 15%;
+    
+    --primary: 265 89% 65%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 260 25% 95%;
+    --secondary-foreground: 262 50% 40%;
+    
+    --muted: 260 25% 95%;
+    --muted-foreground: 260 10% 40%;
+    
+    --accent: 265 89% 95%;
+    --accent-foreground: 262 50% 40%;
+    
+    --destructive: 350 89% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 260 15% 92%;
+    --input: 260 15% 92%;
+    --ring: 265 89% 65%;
+    
+    --radius: 0.75rem;
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+ 
+  .dark {
+    /* Dark theme */
+    --background: 260 25% 9%;
+    --foreground: 260 15% 95%;
+    
+    --card: 260 20% 12%;
+    --card-foreground: 260 15% 95%;
+    
+    --popover: 260 20% 12%;
+    --popover-foreground: 260 15% 95%;
+    
+    --primary: 265 89% 70%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 260 25% 16%;
+    --secondary-foreground: 260 15% 95%;
+    
+    --muted: 260 25% 16%;
+    --muted-foreground: 260 15% 60%;
+    
+    --accent: 265 89% 20%;
+    --accent-foreground: 260 15% 95%;
+    
+    --destructive: 350 89% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 260 25% 20%;
+    --input: 260 25% 20%;
+    --ring: 265 89% 60%;
   }
 }
 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: "Inter var", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold tracking-tight;
+  }
+
+  /* Add smooth appearance animation for page transitions */
+  #root {
+    @apply animate-fade-in;
+  }
+  
+  /* Glass morphism utilities */
+  .glass {
+    @apply bg-background/20 backdrop-blur-lg border border-white/10 shadow-glass;
+  }
+}
+
+@layer utilities {
+  /* Custom utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-500 to-indigo-600;
+  }
+  
+  .border-gradient {
+    @apply border border-transparent bg-gradient-to-r from-primary to-indigo-600 bg-clip-border;
+    border-width: 1px;
+  }
+
+  /* Animation delay utilities */
+  .delay-75 {
+    animation-delay: 75ms;
+  }
+  
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+  
+  .delay-150 {
+    animation-delay: 150ms;
+  }
+  
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+  
+  .delay-500 {
+    animation-delay: 500ms;
+  }
+  
+  .delay-700 {
+    animation-delay: 700ms;
+  }
+}
+
+/* Custom scroll bar */
+::-webkit-scrollbar {
+  @apply w-1.5;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted rounded-full transition-all duration-300;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground;
+}
+
+/* Fade animations for page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 400ms, transform 400ms;
+}
+
+.page-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-exit-active {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 300ms, transform 300ms;
+}
