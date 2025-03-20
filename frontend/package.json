@@ -13,6 +13,7 @@
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
     "@rollup/rollup-win32-x64-msvc": "^4.35.0",
+    "lucide-react": "^0.483.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

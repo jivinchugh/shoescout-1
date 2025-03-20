@@ -5,6 +5,7 @@ import LoginButton from "./components/auth/LoginButton";
 import LogoutButton from "./components/auth/LogoutButton";
 import Profile from "./components/auth/Profile";
 import ShoeSizeForm from "./components/ShoeSizeForm"; // Import the new component
+import ShoeSearch from "./components/ShoeSearch"; // Add the correct path
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth0();
@@ -51,6 +52,13 @@ function App() {
       {isAuthenticated && (
         <div className="w-full max-w-md">
           <ShoeSizeForm />
+        </div>
+      )}
+
+      {/* Add the ShoeSearch component when user is authenticated */}
+      {isAuthenticated && (
+        <div className="w-full max-w-md mt-6">
+          <ShoeSearch />
         </div>
       )}
 
