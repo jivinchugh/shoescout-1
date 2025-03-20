@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import TestComponent from "./components/testComponent";
 import LoginButton from "./components/auth/LoginButton";
 import LogoutButton from "./components/auth/LogoutButton";
 import Profile from "./components/auth/Profile";
@@ -61,8 +60,6 @@ function App() {
           <ShoeSearch />
         </div>
       )}
-
-      <TestComponent />
     </div>
   );
 }
