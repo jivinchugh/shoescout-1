@@ -92,11 +92,6 @@ export function Footer() {
           <p className="text-sm text-muted-foreground">
             &copy; {year} ShoeScout. All rights reserved.
           </p>
-          <p className="mt-4 flex items-center text-sm text-muted-foreground md:mt-0">
-            Made with 
-            <Heart className="mx-1 h-4 w-4 text-destructive" /> 
-            by Group 11
-          </p>
         </div>
       </div>
     </footer>
