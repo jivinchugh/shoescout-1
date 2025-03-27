@@ -121,7 +121,7 @@ export default function AnimatedBeamMultipleOutputDemo({
 const Icons = {
   ShoeScout: () => (
     <img 
-      src="/ShoeImages/_ACD37098-D53D-40DB-AEA0-52F68AB4128D_-removebg-preview.png"
+      src= "/ShoeImages/ShoeScout.png"
       alt="ShoeScout Logo"
       width="100%"
       height="100%"

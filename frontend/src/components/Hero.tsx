@@ -1,14 +1,12 @@
-
-import { cn } from '@/lib/utils';
-import { ArrowRight } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { ArrowRight } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { MarqueeDemo } from './MovingBrands';
-import { WordRotateDemo } from './WordRotate';
+import { MarqueeDemo } from "./MovingBrands";
+import { WordRotateDemo } from "./WordRotate";
 import { InteractiveHoverButton } from "@/components/magicui/interactive-hover-button";
 
-
 export function Hero() {
-    const { loginWithRedirect } = useAuth0();
+  const { loginWithRedirect } = useAuth0();
   return (
     <section className="relative min-h-screen w-full overflow-hidden pt-20 pb md:pt-32 md:pb">
       {/* Background Elements */}
@@ -19,27 +17,26 @@ export function Hero() {
 
       <div className="mt-0 container relative mx-auto px-4">
         <div className="mx-auto max-w-4xl text-center">
-         
-          <h1 className="text-balance font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl animate-slide-down [animation-delay:75ms]">
-            <span className="text-gradient">Smart Price Comparison</span> 
+          <h1 className="text-balance font-display sm:mt-6 md:mt-8 lg:mt-8 xl:mt-8 2xl:mt-16 text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl animate-slide-down [animation-delay:75ms]">
+            <span className="text-gradient">Smart Price Comparison</span>
             <br />
             <WordRotateDemo />
           </h1>
-          
+
           <p className="mt-6 text-lg text-muted-foreground animate-slide-down [animation-delay:150ms]">
-            We aggregate prices from trusted resellers
-            to help you find the best deals on your favorite shoes.
+            We aggregate prices from trusted resellers to help you find the best
+            deals on your favorite shoes.
           </p>
-          
+
           {/* Call to Action */}
-         
+
           <br />
           <InteractiveHoverButton>Get Started</InteractiveHoverButton>
           {/* Featured Shoe Image */}
-          
-          <br /> 
+
           <br />
-          <br /> 
+          <br />
+          <br />
           <MarqueeDemo />
         </div>
       </div>

@@ -28,7 +28,7 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="relative py-5 overflow-hidden">
+    <section id="features" className="relative py-2 overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute right-[10%] top-[20%] h-[30%] w-[40%] rounded-full bg-primary/5 blur-[120px]" />
