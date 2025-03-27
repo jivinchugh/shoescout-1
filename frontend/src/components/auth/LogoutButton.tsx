@@ -1,4 +1,5 @@
 import React from "react";
+import { BorderBeam } from "@/components/magicui/border-beam";
 import { useAuth0 } from "@auth0/auth0-react";
 
 const LogoutButton = () => {
@@ -9,9 +10,10 @@ const LogoutButton = () => {
       onClick={() =>
         logout({ logoutParams: { returnTo: window.location.origin } })
       }
-      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+      className="group flex items-center justify-center rounded-full bg-primary px-6 py-3 text-base font-medium text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:translate-y-[-2px]"
     >
       Log Out
+     
     </button>
   );
 };
