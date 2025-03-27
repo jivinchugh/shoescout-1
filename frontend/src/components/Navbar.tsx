@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import LoginButton from './auth/LoginButton';
 import LogoutButton from './auth/LogoutButton';
 import { useAuth0 } from "@auth0/auth0-react";
+import logo from '@/components/brandLogos/_ACD37098-D53D-40DB-AEA0-52F68AB4128D_-removebg-preview.png';
 
 
 
@@ -40,7 +41,8 @@ export function Navbar() {
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
-          <a href="/" className="relative z-10">
+          <a href="/" className="relative z-10 flex items-center gap-2">
+          <img src={logo} className="App-logo w-8 h-8 md:w-10 md:h-10" alt="logo" />
             <span className="font-display text-xl font-semibold text-gradient">
               ShoeScout
             </span>
