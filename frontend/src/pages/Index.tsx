@@ -6,15 +6,18 @@ import { Testimonials } from '@/components/Testimonials';
 import { Team } from '@/components/Team';
 import { useAuth0 } from "@auth0/auth0-react";
 import ShoeSizeForm from '@/components/ShoeSizeForm';
+import {BentoDemo} from '@/components/BentoFeatures';
+
 
 const Index = () => {
+  
   const { isAuthenticated } = useAuth0();
   return (
     <Layout>
       <Hero />
       <Features />
       <Testimonials />
-      <Team />
+      
       {isAuthenticated && (
         <div className="w-full max-w-md">
           <ShoeSizeForm />
