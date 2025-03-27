@@ -38,54 +38,93 @@ app.get('/', (req, res) => {
 });
 
 // Public endpoint to fetch shoes data
-app.get('/shoes/:query', async (req, res) => {
+app.get('/shoes/:query', checkJwt, extractAuth0Id, async (req, res) => {
   const { query } = req.params;
 
+  // Replace dashes with spaces for better search
   const formattedQuery = query.replace(/-/g, ' ');
 
+  // Fetch user shoe size from DB
+  let userShoeSize;
+  try {
+    const user = await getUserShoeSize(req.auth0Id);
+    if (!user) {
+      return res.status(404).json({ error: 'No shoe size found for this user' });
+    }
+    userShoeSize = user.shoeSize;
+  } catch (err) {
+    logger.error('Error fetching user shoe size:', err);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+
+  // StockX API options
   const options = {
     method: 'GET',
     url: 'https://stockx-api.p.rapidapi.com/search',
     params: {
       query: formattedQuery,
-      page: 1
+      page: 1,
+      limit: 10, // Fetch up to 10 results
     },
     headers: {
       'Accept': 'application/json',
       'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
       'X-RapidAPI-Host': process.env.STOCKX_API_HOST,
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
-    }
+      'User-Agent': 'Mozilla/5.0',
+    },
   };
 
   try {
     const response = await axios.request(options);
-
-    if (!response.data || response.data.estimatedTotalHits === 0 || !response.data.hits) {
+    if (!response.data || !response.data.hits) {
       return res.status(404).json({ error: 'No shoes found for the given query' });
     }
 
-    const products = response.data.hits;
-    if (products.length === 0) {
-      return res.status(404).json({ error: 'No shoes found' });
-    }
+    // Process multiple shoes (up to 10)
+    const shoes = response.data.hits.slice(0, 10).map((shoe) => {
+      const variants = shoe.variants || [];
 
-    const shoe = products[0];
+      // Find the variant with the requested size
+      const sizeVariant = variants.find((variant) => variant.size === userShoeSize);
 
-    res.json({
-      title: shoe.title || 'No title available',
-      description: shoe.description || 'No description available',
-      retail_price: shoe.retail_price || 'N/A',
-      market_price: shoe.market?.price || 'N/A',
-      brand: shoe.brand || 'N/A',
-      image_url: shoe.image || null
+      // Extract pricing information
+      const marketPrice =
+        sizeVariant && sizeVariant.market
+          ? sizeVariant.market.price
+          : shoe.market && shoe.market.price
+          ? shoe.market.price
+          : 'N/A';
+
+      // Look for "Buy Now" price in various possible locations
+      let buyNowPrice = 'N/A';
+      if (sizeVariant) {
+        if (sizeVariant.lowestAsk) buyNowPrice = sizeVariant.lowestAsk;
+        else if (sizeVariant.buyNow) buyNowPrice = sizeVariant.buyNow;
+        else if (sizeVariant.ask) buyNowPrice = sizeVariant.ask;
+      } else if (shoe) {
+        if (shoe.lowestAsk) buyNowPrice = shoe.lowestAsk;
+        else if (shoe.buyNow) buyNowPrice = shoe.buyNow;
+        else if (shoe.ask) buyNowPrice = shoe.ask;
+      }
+
+      return {
+        title: shoe.title || 'No title available',
+        description: shoe.description || 'No description available',
+        retail_price: shoe.retail_price || 'N/A',
+        market_price: marketPrice,
+        buy_now_price: buyNowPrice,
+        user_size: userShoeSize, // Include the size searched for
+        brand: shoe.brand || 'N/A',
+        image_url: shoe.image || null,
+      };
     });
 
+    res.json(shoes); // Return an array of shoes
   } catch (error) {
-    logger.error('Error fetching shoes data:', error);
+    console.error('Error fetching shoes:', error);
     res.status(500).json({
       error: 'Failed to fetch shoes data',
-      details: error.message
+      details: error.message,
     });
   }
 });
