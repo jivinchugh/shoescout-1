@@ -7,6 +7,7 @@ import { Team } from '@/components/Team';
 import { useAuth0 } from "@auth0/auth0-react";
 import ShoeSizeForm from '@/components/ShoeSizeForm';
 import {BentoDemo} from '@/components/BentoFeatures';
+import ShoeSearch from '@/components/ShoeSearch';
 
 
 const Index = () => {
@@ -21,6 +22,7 @@ const Index = () => {
       {isAuthenticated && (
         <div className="w-full max-w-md">
           <ShoeSizeForm />
+          <ShoeSearch />
         </div>
       )}
     </Layout>
