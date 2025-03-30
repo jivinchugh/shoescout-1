@@ -40,6 +40,5 @@ ShoeScout is a web application designed to help users find the best prices for a
 - **Backend**: Javascript, [Node.js](https://nodejs.org/en)
 - **Database**: [MongoDB](https://www.mongodb.com/) for user data and storing cache
 - **APIs**: Integration with reseller APIs (StockX), and [Rapid API](https://rapidapi.com/belchiorarkad-FqvHs2EDOtP/api/sneaker-database-stockx) for price comparison 
-- **Authentication**: The user does authentication and profile creation using [Auth0](https://auth0.com/)
-
+- **Authentication**: The user handles authentication and profile creation using [Auth0](https://auth0.com/)
 
