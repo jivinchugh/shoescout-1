@@ -1,4 +1,4 @@
-# Group_11
+# ShoeScout
 ## Developers
 | Name        |   Role |     Github    | Email       |
 | ----------- | --------- | --------- | --------------------------- |
@@ -8,7 +8,7 @@
 | Nand Patel  | Database Specialist | Nand1904 | npatel389@myseneca.ca |
 
 ## Project Description
-This project is a web application designed to help users find the best prices for a particular shoe across verified reseller platforms (such as GOAT, StockX, etc.). By aggregating data from these platforms, the website provides users with the following features:
+ShoeScout is a web application designed to help users find the best prices for a particular shoe across verified reseller platforms (such as GOAT, StockX, FightClub, KicksFinder etc.). By aggregating data from these platforms, the website provides users with the following features:
 
 ## Features
 
@@ -19,10 +19,13 @@ This project is a web application designed to help users find the best prices fo
 2. **Shoe Description**
    - Provides detailed descriptions of the selected shoe, including brand, model, and specifications.
 
-3. **High-Quality Images**
+3. **Favorites Storage**
+   - The user can store his/her favorites, and browse for similar shoes.  
+
+4. **High-Quality Images**
    - Displays images of the shoe to help users verify their choice visually.
 
-4. **Direct user to reseller website**
+5. **Direct user to reseller website**
    - Directs the user to reseller's website so that the user can buy shoes from there. 
 
 ## Usage
@@ -33,9 +36,9 @@ This project is a web application designed to help users find the best prices fo
 
 ## Tech Stack
 
-- **Frontend**: [React.js](https://react.dev/), [Tailwind CSS](https://tailwindcss.com/)
+- **Frontend**: [React.js](https://react.dev/), [Vite](https://vite.dev/guide/), [Tailwind CSS](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/), [Magic UI](https://magicui.design/)
 - **Backend**: Javascript, [Node.js](https://nodejs.org/en)
 - **Database**: [MongoDB](https://www.mongodb.com/) for user data and storing cache
 - **APIs**: Integration with reseller APIs (StockX), and [Rapid API](https://rapidapi.com/belchiorarkad-FqvHs2EDOtP/api/sneaker-database-stockx) for price comparison 
-
+- **Authentication**: The user handles authentication and profile creation using [Auth0](https://auth0.com/)
 
