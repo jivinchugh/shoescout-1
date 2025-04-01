@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Search, Loader2, Heart, ShoppingBag, Tag } from "lucide-react";
-import "./SearchStyles.css"; // Import the CSS file
+import { Search, Loader2, Heart, Tag } from "lucide-react";
+import { motion } from "framer-motion";
+import "./Searchstyles.css"; // Import the CSS file
 
 interface ShoeData {
   title: string;
@@ -24,6 +25,9 @@ export default function ShoeSearch() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedShoe, setSelectedShoe] = useState<ShoeData | null>(null);
+  const [favorites, setFavorites] = useState<ShoeData[]>([]);
+  const [favoriteActionLoading, setFavoriteActionLoading] = useState(false);
+  const [favoriteActionError, setFavoriteActionError] = useState<string | null>(null);
 
   // Format price with dollar sign and commas
   const formatPrice = (price: string | number): string => {
@@ -41,32 +45,62 @@ export default function ShoeSearch() {
 
   // Calculate savings percentage
   const calculateSavings = (retail: string | number, market: string | number): string => {
-    const retailNum = typeof retail === "string" ? Number.parseFloat(retail) : retail;
-    const marketNum = typeof market === "string" ? Number.parseFloat(market) : market;
+    if (retail === "N/A" || market === "N/A") return "N/A";
 
-    if (isNaN(retailNum) || isNaN(marketNum) || retailNum <= 0) return "N/A";
+    const retailPrice = typeof retail === "string" ? Number.parseFloat(retail) : retail;
+    const marketPrice = typeof market === "string" ? Number.parseFloat(market) : market;
 
-    const savings = ((retailNum - marketNum) / retailNum) * 100;
-    return savings > 0 ? `${savings.toFixed(0)}%` : "0%";
+    if (isNaN(retailPrice) || isNaN(marketPrice) || retailPrice <= 0) return "N/A";
+
+    const savings = ((retailPrice - marketPrice) / retailPrice) * 100;
+    return savings <= 0 ? "0%" : `${Math.round(savings)}%`;
   };
 
-  // Handle search submission
+  // Fetch favorites when component mounts
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchFavorites();
+    }
+  }, [isAuthenticated]);
+
+  // Fetch favorites from the backend
+  const fetchFavorites = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch("http://localhost:8080/api/favorites", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch favorites");
+      }
+
+      const data = await response.json();
+      setFavorites(data.favorites || []);
+    } catch (err) {
+      console.error("Error fetching favorites:", err);
+      // Silently fail for favorites fetch
+    }
+  };
+
+  // Check if a shoe is in favorites
+  const isInFavorites = (shoeTitle: string): boolean => {
+    return favorites.some(fav => fav.title === shoeTitle);
+  };
+
+  // Handle the search form submission
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!query.trim()) return;
-
-    if (!isAuthenticated) {
-      loginWithRedirect();
-      return;
-    }
 
     setIsLoading(true);
     setError(null);
     setResults([]);
 
     try {
-      // Get the access token from Auth0
       const token = await getAccessTokenSilently();
 
       // Format query for URL (replace spaces with dashes)
@@ -105,6 +139,80 @@ export default function ShoeSearch() {
   // Close detail view
   const closeDetail = () => {
     setSelectedShoe(null);
+  };
+
+  // Add shoe to favorites
+  const addToFavorites = async (shoe: ShoeData) => {
+    setFavoriteActionLoading(true);
+    setFavoriteActionError(null);
+    
+    try {
+      const token = await getAccessTokenSilently();
+      
+      const response = await fetch("http://localhost:8080/api/favorites", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(shoe),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add shoe to favorites");
+      }
+      
+      const data = await response.json();
+      setFavorites(data.favorites || []);
+    } catch (err) {
+      console.error("Error adding to favorites:", err);
+      setFavoriteActionError(err instanceof Error ? err.message : "Failed to add to favorites");
+    } finally {
+      setFavoriteActionLoading(false);
+    }
+  };
+  
+  // Remove shoe from favorites
+  const removeFromFavorites = async (shoeTitle: string) => {
+    setFavoriteActionLoading(true);
+    setFavoriteActionError(null);
+    
+    try {
+      const token = await getAccessTokenSilently();
+      
+      // URL encode the title for the API endpoint
+      const encodedTitle = encodeURIComponent(shoeTitle);
+      
+      const response = await fetch(`http://localhost:8080/api/favorites/${encodedTitle}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to remove shoe from favorites");
+      }
+      
+      const data = await response.json();
+      setFavorites(data.favorites || []);
+    } catch (err) {
+      console.error("Error removing from favorites:", err);
+      setFavoriteActionError(err instanceof Error ? err.message : "Failed to remove from favorites");
+    } finally {
+      setFavoriteActionLoading(false);
+    }
+  };
+  
+  // Handle favorite button click based on current status
+  const handleFavoriteClick = (shoe: ShoeData) => {
+    if (isInFavorites(shoe.title)) {
+      removeFromFavorites(shoe.title);
+    } else {
+      addToFavorites(shoe);
+    }
   };
 
   if (!isAuthenticated) {
@@ -163,16 +271,24 @@ export default function ShoeSearch() {
         </div>
       )}
 
+      {/* Favorite Action Error */}
+      {favoriteActionError && (
+        <div className="error-alert">
+          <h3>Favorite Error</h3>
+          <p>{favoriteActionError}</p>
+        </div>
+      )}
+
       {/* Results */}
       {!isLoading && !error && results.length > 0 && !selectedShoe && (
         <div className="results-grid">
           {results.map((shoe, index) => (
-            <div key={index} className="shoe-card" onClick={() => handleCardClick(shoe)}>
-              <div className="shoe-image-container">
+            <div key={index} className="shoe-card">
+              <div className="shoe-image-container" onClick={() => handleCardClick(shoe)}>
                 {shoe.image_url ? (
                   <img src={shoe.image_url} alt={shoe.title} className="shoe-image" />
                 ) : (
-                  <div>No image available</div>
+                  <div className="bg-muted text-muted-foreground flex items-center justify-center h-full">No image available</div>
                 )}
                 {calculateSavings(shoe.retail_price, shoe.market_price) !== "0%" &&
                   calculateSavings(shoe.retail_price, shoe.market_price) !== "N/A" && (
@@ -197,6 +313,22 @@ export default function ShoeSearch() {
                   </div>
                 </div>
               </div>
+              <motion.button 
+                className={`favorite-button ${isInFavorites(shoe.title) ? 'favorited' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleFavoriteClick(shoe);
+                }}
+                disabled={favoriteActionLoading}
+                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.1 }}
+              >
+                {favoriteActionLoading ? (
+                  <Loader2 className="spinner" />
+                ) : (
+                  <Heart className={isInFavorites(shoe.title) ? "filled-heart" : ""} />
+                )}
+              </motion.button>
             </div>
           ))}
         </div>
@@ -245,10 +377,35 @@ export default function ShoeSearch() {
                     </div>
                   )}
                 <div className="action-buttons">
-                  <button className="add-to-favorites">
-                    <Heart className="button-icon" />
-                    Add to Favorites
-                  </button>
+                  <motion.button 
+                    className={`add-to-favorites ${isInFavorites(selectedShoe.title) ? 'favorited' : ''}`}
+                    onClick={() => handleFavoriteClick(selectedShoe)}
+                    disabled={favoriteActionLoading}
+                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ 
+                      scale: 1.05,
+                      backgroundColor: isInFavorites(selectedShoe.title) ? 
+                        "rgba(255, 200, 200, 1)" : 
+                        "rgba(245, 245, 245, 1)" 
+                    }}
+                    animate={
+                      favoriteActionLoading ? 
+                      { scale: [1, 1.05, 1] } : 
+                      isInFavorites(selectedShoe.title) ? 
+                        { backgroundColor: "#fff0f0" } : 
+                        { backgroundColor: "white" }
+                    }
+                    transition={{ duration: 0.3 }}
+                  >
+                    {favoriteActionLoading ? (
+                      <Loader2 className="spinner" />
+                    ) : (
+                      <>
+                        <Heart className={isInFavorites(selectedShoe.title) ? "filled-heart" : "button-icon"} />
+                        {isInFavorites(selectedShoe.title) ? "Remove from Favorites" : "Add to Favorites"}
+                      </>
+                    )}
+                  </motion.button>
                 </div>
               </div>
             </div>
