@@ -1,19 +1,18 @@
-
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from './ThemeToggle';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Heart } from 'lucide-react'; // Import Heart icon
 import { cn } from '@/lib/utils';
 import LoginButton from './auth/LoginButton';
 import LogoutButton from './auth/LogoutButton';
 import { useAuth0 } from "@auth0/auth0-react";
 import logo from '@/components/brandLogos/_ACD37098-D53D-40DB-AEA0-52F68AB4128D_-removebg-preview.png';
-
-
+import { Link } from 'react-router-dom';
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated } = useAuth0();
+  
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -42,7 +41,7 @@ export function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           <a href="/" className="relative z-10 flex items-center gap-2">
-          <img src={logo} className="App-logo w-8 h-8 md:w-10 md:h-10" alt="logo" />
+            <img src={logo} className="App-logo w-8 h-8 md:w-10 md:h-10" alt="logo" />
             <span className="font-display text-xl font-semibold text-gradient">
               ShoeScout
             </span>
@@ -68,12 +67,32 @@ export function Navbar() {
             >
               Team
             </a>
+            
+            {/* Add Favorites button - only visible when authenticated */}
+            {isAuthenticated && (
+              <Link 
+                to="/favorites" 
+                className="favorites-button text-sm font-medium text-foreground/80 transition-colors hover:text-primary flex items-center gap-1"
+              >
+                <Heart className="h-4 w-4" /> Favorites
+              </Link>
+            )}
+            
             {!isAuthenticated ? <LoginButton /> : <LogoutButton />}
             <ThemeToggle />
           </nav>
 
           {/* Mobile Menu Toggle */}
           <div className="flex items-center md:hidden">
+            {/* Add Favorites button for mobile - only visible when authenticated */}
+            {isAuthenticated && (
+              <Link 
+                to="/favorites" 
+                className="favorites-button mr-2 p-2 text-foreground/80 hover:text-primary"
+              >
+                <Heart className="h-5 w-5" />
+              </Link>
+            )}
             <ThemeToggle />
             <button
               onClick={toggleMobileMenu}
@@ -115,6 +134,18 @@ export function Navbar() {
             >
               Team
             </a>
+            
+            {/* Add Favorites link to mobile menu */}
+            {isAuthenticated && (
+              <Link
+                to="/favorites"
+                className="text-xl font-medium text-foreground transition-colors hover:text-primary flex items-center gap-2"
+                onClick={toggleMobileMenu}
+              >
+                <Heart className="h-5 w-5" /> Favorites
+              </Link>
+            )}
+            
             {!isAuthenticated ? <LoginButton /> : <LogoutButton />}
             
           </nav>

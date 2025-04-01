@@ -96,10 +96,10 @@
 /* Results grid */
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* Force 4 columns */
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
+  width: 100%;
 }
-
 /* Adjust for smaller screens */
 @media (max-width: 1200px) {
   .results-grid {
@@ -119,12 +119,25 @@
   }
 }
 
+/* Fix for the shoe card display issue */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
 .shoe-card {
   border: 1px solid #ddd;
   border-radius: 8px;
   overflow: hidden;
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
   cursor: pointer;
+  position: relative;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .shoe-card:hover {
@@ -343,19 +356,365 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-}
-
-.add-to-favorites {
-  background-color: #fff;
-  border: 1px solid #ccc;
-  color: #333;
+  background-color: white;
+  border: 1px solid #ddd;
+  transition: all 0.2s ease;
 }
 
 .add-to-favorites:hover {
-  background-color: #f5f5f5;
+  border-color: #aaa;
+  background-color: #f9f9f9;
+}
+
+.add-to-favorites.favorited {
+  background-color: #fff0f0;
+  border-color: #ffcece;
+}
+
+.add-to-favorites .filled-heart {
+  color: #ff4545;
+  fill: #ff4545;
 }
 
 .button-icon {
   width: 16px;
   height: 16px;
+}
+
+/* Favorite button styles */
+.favorite-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.favorite-button:hover {
+  background-color: rgba(255, 255, 255, 1);
+  transform: scale(1.1);
+}
+
+.favorite-button.favorited {
+  background-color: rgba(255, 220, 220, 0.8);
+}
+
+.favorite-button .filled-heart {
+  color: #ff4545;
+  fill: #ff4545;
+}
+
+/* Spinner animation */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Favorites page styles */
+.favorites-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 24px;
+  color: #333;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.no-favorites {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.no-favorites .empty-heart {
+  width: 48px;
+  height: 48px;
+  color: #ccc;
+  margin-bottom: 16px;
+}
+
+.no-favorites h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.no-favorites p {
+  font-size: 16px;
+  color: #666;
+  max-width: 400px;
+}
+
+/* Navbar favorites button styles */
+.favorites-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.favorites-button:hover .heart-icon {
+  color: #ff4545;
+}
+
+/* Auth prompt */
+.auth-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.auth-prompt h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.auth-prompt p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.login-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.login-button:hover {
+  background-color: #0056b3;
+}
+
+/* Animation for adding/removing favorites */
+@keyframes heartbeat {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 69, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 69, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 69, 69, 0);
+  }
+}
+
+.favorite-button.favorited:hover .filled-heart {
+  animation: heartbeat 1s ease-in-out;
+}
+
+.favorites-button:hover .h-4,
+.favorites-button:hover .h-5 {
+  color: #ff4545;
+  transform: scale(1.2);
+  transition: all 0.3s ease;
+}
+
+/* Add animation for page transitions */
+.animate-slide-down {
+  animation: slide-down 0.5s ease-out forwards;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Dark mode styles for shoe cards */
+.dark .shoe-card {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.dark .shoe-title {
+  color: hsl(var(--card-foreground));
+}
+
+.dark .shoe-brand,
+.dark .retail-price,
+.dark .user-size {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .shoe-image-container {
+  background-color: hsl(var(--muted));
+}
+
+/* Dark mode styles for detail view */
+.dark .detail-content {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.dark .detail-header h2 {
+  color: hsl(var(--card-foreground));
+}
+
+.dark .close-button {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .close-button:hover {
+  background-color: hsl(var(--accent));
+}
+
+.dark .detail-image-container {
+  background-color: hsl(var(--muted));
+}
+
+.dark .price-item {
+  background-color: hsl(var(--muted) / 0.3);
+}
+
+.dark .price-item span:first-child {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .price-item span:last-child {
+  color: hsl(var(--foreground));
+}
+
+.dark .savings-banner {
+  background-color: hsl(var(--accent) / 0.2);
+  color: hsl(var(--accent-foreground));
+}
+
+.dark .add-to-favorites {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+  color: hsl(var(--card-foreground));
+}
+
+.dark .add-to-favorites:hover {
+  background-color: hsl(var(--accent) / 0.1);
+}
+
+.dark .add-to-favorites.favorited {
+  background-color: hsl(350 89% 70% / 0.1);
+  border-color: hsl(350 89% 70% / 0.3);
+}
+
+/* No favorites section in dark mode */
+.dark .no-favorites {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.dark .no-favorites .empty-heart {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .no-favorites h3 {
+  color: hsl(var(--card-foreground));
+}
+
+.dark .no-favorites p {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Error alert in dark mode */
+.dark .error-alert {
+  background-color: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+  border-color: hsl(var(--destructive) / 0.2);
+}
+
+.dark .shoe-card {
+  background-color: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .shoe-details {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground));
+}
+
+.dark .favorite-button {
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+.dark .favorite-button:hover {
+  background-color: hsl(var(--muted) / 0.8);
+}
+
+.dark .favorite-button.favorited {
+  background-color: hsl(350 89% 70% / 0.2);
+}
+
+.dark .discount-badge {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.dark .detail-view {
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
 }
