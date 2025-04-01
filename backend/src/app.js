@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const { createUser, getUser, saveUserShoeSize, getUserShoeSize } = require('./models/user');
+const { createUser, getUser, saveUserShoeSize, getUserShoeSize, addFavoriteShoe, removeFavoriteShoe, getUserFavorites } = require('./models/user');
 const axios = require('axios');
 
 // author and version from our package.json file
@@ -92,8 +92,8 @@ app.get('/shoes/:query', checkJwt, extractAuth0Id, async (req, res) => {
         sizeVariant && sizeVariant.market
           ? sizeVariant.market.price
           : shoe.market && shoe.market.price
-          ? shoe.market.price
-          : 'N/A';
+            ? shoe.market.price
+            : 'N/A';
 
       // Look for "Buy Now" price in various possible locations
       let buyNowPrice = 'N/A';
@@ -204,6 +204,58 @@ protectedRouter.post('/shoe-size', async (req, res) => {
     });
   } catch (err) {
     logger.error('Error saving shoe size', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
+});
+
+// Get user's favorite shoes
+protectedRouter.get('/favorites', async (req, res) => {
+  try {
+    const favorites = await getUserFavorites(req.auth0Id);
+    res.status(200).json({
+      auth0Id: req.auth0Id,
+      favorites
+    });
+  } catch (err) {
+    logger.error('Error fetching favorites', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
+});
+
+// Add a shoe to favorites
+protectedRouter.post('/favorites', async (req, res) => {
+  const shoeData = req.body;
+
+  if (!shoeData || !shoeData.title) {
+    return res.status(400).json({ error: 'Valid shoe data is required' });
+  }
+
+  try {
+    const user = await addFavoriteShoe(req.auth0Id, shoeData);
+    res.status(200).json({
+      message: 'Shoe added to favorites successfully',
+      auth0Id: user.auth0Id,
+      favorites: user.favorites
+    });
+  } catch (err) {
+    logger.error('Error adding favorite', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
+});
+
+// Remove a shoe from favorites
+protectedRouter.delete('/favorites/:title', async (req, res) => {
+  const { title } = req.params;
+
+  try {
+    const user = await removeFavoriteShoe(req.auth0Id, title);
+    res.status(200).json({
+      message: 'Shoe removed from favorites successfully',
+      auth0Id: user.auth0Id,
+      favorites: user.favorites
+    });
+  } catch (err) {
+    logger.error('Error removing favorite', err);
     res.status(500).json({ error: 'Internal Server Error', details: err.message });
   }
 });
