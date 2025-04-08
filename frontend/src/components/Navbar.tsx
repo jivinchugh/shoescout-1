@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from './ThemeToggle';
-import { Menu, X, Heart } from 'lucide-react'; // Import Heart icon
+import { Menu, X, Heart, Search, Loader2 } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 import LoginButton from './auth/LoginButton';
 import LogoutButton from './auth/LogoutButton';
 import { useAuth0 } from "@auth0/auth0-react";
 import logo from '@/components/brandLogos/_ACD37098-D53D-40DB-AEA0-52F68AB4128D_-removebg-preview.png';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Button } from './ui/button';
+import { useShoeResults } from '@/context/ShoeResultsProvider';
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isAuthenticated } = useAuth0();
+  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { setResults, setIsLoading, setError } = useShoeResults();
+  
+  const isDashboard = location.pathname === '/dashboard';
   
   useEffect(() => {
     const handleScroll = () => {
@@ -31,6 +40,47 @@ export function Navbar() {
     }
   };
 
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    
+    setIsLoading(true);
+    setError(null);
+    setResults([]);
+
+    try {
+      const token = await getAccessTokenSilently();
+      const formattedQuery = searchQuery.trim().replace(/\s+/g, "-");
+      
+      const response = await fetch(`http://localhost:8080/shoes/${formattedQuery}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch shoes");
+      }
+      
+      const data = await response.json();
+      setResults(data);
+      
+      if (!isDashboard) {
+        navigate('/dashboard');
+      }
+      
+      setTimeout(() => {
+        document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <header
       className={cn(
@@ -40,35 +90,74 @@ export function Navbar() {
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
-          <a href="/" className="relative z-10 flex items-center gap-2">
+          <Link to={isAuthenticated ? "/dashboard" : "/"} className="relative z-10 flex items-center gap-2">
             <img src={logo} className="App-logo w-8 h-8 md:w-10 md:h-10" alt="logo" />
             <span className="font-display text-xl font-semibold text-gradient">
               ShoeScout
             </span>
-          </a>
+          </Link>
+
+          {/* Search Bar - Only visible when authenticated */}
+          {isAuthenticated && (
+            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-8">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search for shoes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-10 pl-10 pr-4 rounded-md border border-input bg-background"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                size="sm" 
+                className="ml-2"
+                disabled={isSearching}
+              >
+                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+              </Button>
+            </form>
+          )}
 
           {/* Desktop Navigation */}
           <nav className="hidden items-center space-x-8 md:flex">
-            <a
-              href="#features"
-              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
-            >
-              Features
-            </a>
-            <a
-              href="#testimonials"
-              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
-            >
-              Testimonials
-            </a>
-            <a
-              href="#team"
-              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
-            >
-              Team
-            </a>
+            {/* Only show these links when not authenticated */}
+            {!isAuthenticated && (
+              <>
+                <a
+                  href="#features"
+                  className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+                >
+                  Features
+                </a>
+                <a
+                  href="#testimonials"
+                  className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+                >
+                  Testimonials
+                </a>
+                <a
+                  href="#team"
+                  className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+                >
+                  Team
+                </a>
+              </>
+            )}
             
-            {/* Add Favorites button - only visible when authenticated */}
+            {/* Dashboard link - only visible when authenticated */}
+            {isAuthenticated && (
+              <Link 
+                to="/dashboard" 
+                className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+              >
+                Dashboard
+              </Link>
+            )}
+            
+            {/* Favorites link - only visible when authenticated */}
             {isAuthenticated && (
               <Link 
                 to="/favorites" 
@@ -84,7 +173,17 @@ export function Navbar() {
 
           {/* Mobile Menu Toggle */}
           <div className="flex items-center md:hidden">
-            {/* Add Favorites button for mobile - only visible when authenticated */}
+            {/* Mobile search button - only visible when authenticated */}
+            {isAuthenticated && (
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="mr-2 p-2 text-foreground/80 hover:text-primary"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            )}
+            
+            {/* Favorites button for mobile - only visible when authenticated */}
             {isAuthenticated && (
               <Link 
                 to="/favorites" 
@@ -99,11 +198,7 @@ export function Navbar() {
               className="ml-2 rounded-full p-2 text-foreground hover:bg-secondary"
               aria-label="Toggle menu"
             >
-              {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
+              {isMobileMenuOpen ? <X /> : <Menu />}
             </button>
           </div>
         </div>
@@ -111,44 +206,85 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 top-[72px] z-50 bg-background animate-fade-in md:hidden">
-          <nav className="container mx-auto flex h-full flex-col items-center justify-center space-y-8 p-4">
-            <a
-              href="#features"
-              className="text-xl font-medium text-foreground transition-colors hover:text-primary"
-              onClick={toggleMobileMenu}
-            >
-              Features
-            </a>
-            <a
-              href="#testimonials"
-              className="text-xl font-medium text-foreground transition-colors hover:text-primary"
-              onClick={toggleMobileMenu}
-            >
-              Testimonials
-            </a>
-            <a
-              href="#team"
-              className="text-xl font-medium text-foreground transition-colors hover:text-primary"
-              onClick={toggleMobileMenu}
-            >
-              Team
-            </a>
-            
-            {/* Add Favorites link to mobile menu */}
+        <div className="fixed inset-0 z-40 bg-background pt-20">
+          <div className="container mx-auto px-4">
+            {/* Mobile Search - Only visible when authenticated */}
             {isAuthenticated && (
-              <Link
-                to="/favorites"
-                className="text-xl font-medium text-foreground transition-colors hover:text-primary flex items-center gap-2"
-                onClick={toggleMobileMenu}
-              >
-                <Heart className="h-5 w-5" /> Favorites
-              </Link>
+              <form onSubmit={handleSearch} className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search for shoes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-10 pl-10 pr-4 rounded-md border border-input bg-background"
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full mt-2"
+                  disabled={isSearching}
+                >
+                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Search"}
+                </Button>
+              </form>
             )}
             
-            {!isAuthenticated ? <LoginButton /> : <LogoutButton />}
-            
-          </nav>
+            <nav className="flex flex-col space-y-6 pb-6">
+              {/* Only show these links when not authenticated */}
+              {!isAuthenticated && (
+                <>
+                  <a
+                    href="#features"
+                    className="text-xl font-medium text-foreground transition-colors hover:text-primary"
+                    onClick={toggleMobileMenu}
+                  >
+                    Features
+                  </a>
+                  <a
+                    href="#testimonials"
+                    className="text-xl font-medium text-foreground transition-colors hover:text-primary"
+                    onClick={toggleMobileMenu}
+                  >
+                    Testimonials
+                  </a>
+                  <a
+                    href="#team"
+                    className="text-xl font-medium text-foreground transition-colors hover:text-primary"
+                    onClick={toggleMobileMenu}
+                  >
+                    Team
+                  </a>
+                </>
+              )}
+              
+              {/* Dashboard link to mobile menu */}
+              {isAuthenticated && (
+                <Link
+                  to="/dashboard"
+                  className="text-xl font-medium text-foreground transition-colors hover:text-primary flex items-center gap-2"
+                  onClick={toggleMobileMenu}
+                >
+                  Dashboard
+                </Link>
+              )}
+              
+              {/* Add Favorites link to mobile menu */}
+              {isAuthenticated && (
+                <Link
+                  to="/favorites"
+                  className="text-xl font-medium text-foreground transition-colors hover:text-primary flex items-center gap-2"
+                  onClick={toggleMobileMenu}
+                >
+                  <Heart className="h-5 w-5" /> Favorites
+                </Link>
+              )}
+              
+              {!isAuthenticated ? <LoginButton /> : <LogoutButton />}
+              
+            </nav>
+          </div>
         </div>
       )}
     </header>
