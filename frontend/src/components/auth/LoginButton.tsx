@@ -8,9 +8,10 @@ const LoginButton = () => {
 
   return (
     <button
-      onClick={() => loginWithRedirect()}
+      onClick={() => loginWithRedirect({
+        appState: { returnTo: "/" }
+      })}
       className="group flex items-center justify-center rounded-full bg-primary px-6 py-3 text-base font-medium text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:translate-y-[-2px]"
-      
     >
       Log In
     </button>

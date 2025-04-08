@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Heart, Loader2, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Layout } from "./Layout";
+import { AuthLayout } from "./AuthLayout";
 import "./Searchstyles.css";
 
 interface ShoeData {
@@ -407,7 +407,7 @@ const Favorites = () => {
     // If not authenticated, redirect to login
     if (!isAuthenticated) {
         return (
-            <Layout>
+            <AuthLayout>
                 <section className="relative pt-32 pb-16 min-h-[80vh] flex items-center">
                     <div className="absolute inset-0 -z-10 overflow-hidden">
                         <div className="absolute -left-[10%] top-[20%] h-[40%] w-[50%] rounded-full bg-primary/10 blur-[120px]" />
@@ -429,12 +429,12 @@ const Favorites = () => {
                         </div>
                     </div>
                 </section>
-            </Layout>
+            </AuthLayout>
         );
     }
 
-    // Return the Favorites content inside the Layout component
-    return <Layout>{content}</Layout>;
+    // Return the Favorites content inside the AuthLayout component
+    return <AuthLayout>{content}</AuthLayout>;
 };
 
 export default Favorites;

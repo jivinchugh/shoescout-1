@@ -19,12 +19,6 @@ const Index = () => {
       <Features />
       <Testimonials />
       
-      {isAuthenticated && (
-        <div className="w-full max-w-md">
-          <ShoeSizeForm />
-          <ShoeSearch />
-        </div>
-      )}
     </Layout>
   );
 };
