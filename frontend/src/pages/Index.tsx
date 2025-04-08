@@ -8,16 +8,26 @@ import { useAuth0 } from "@auth0/auth0-react";
 import ShoeSizeForm from '@/components/ShoeSizeForm';
 import {BentoDemo} from '@/components/BentoFeatures';
 import ShoeSearch from '@/components/ShoeSearch';
-
+import Home from '@/components/Home';
 
 const Index = () => {
   
   const { isAuthenticated } = useAuth0();
   return (
     <Layout>
-      <Hero />
+       {!isAuthenticated && (
+        <div >
+          <Hero />
       <Features />
       <Testimonials />
+        </div>
+      )}
+       {isAuthenticated && (
+        <div>
+          <Home />
+        </div>
+      )}
+      
       
     </Layout>
   );

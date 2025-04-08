@@ -8,7 +8,7 @@ import { InteractiveHoverButton } from "@/components/magicui/interactive-hover-b
 export function Hero() {
   const { loginWithRedirect } = useAuth0();
   return (
-    <section className="relative min-h-screen w-full overflow-hidden pt-20 pb md:pt-32 md:pb">
+    <section className="relative min-h-screen w-full overflow-hidden pt-20 pb md:pt-20 md:pb">
       {/* Background Elements */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -left-[10%] -top-[10%] h-[40%] w-[50%] rounded-full bg-primary/10 blur-[120px]" />
