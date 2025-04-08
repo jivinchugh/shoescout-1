@@ -3,9 +3,12 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Search, Loader2, Heart, Tag } from "lucide-react";
+import { Search, Loader2, Heart, Tag, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
-import "./Searchstyles.css"; // Import the CSS file
+import "./Searchstyles.css";
+import { useNavigate } from "react-router-dom";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface ShoeData {
   title: string;
@@ -16,9 +19,11 @@ interface ShoeData {
   user_size: number;
   brand: string;
   image_url: string;
+  id?: string; // Add this for navigation purposes
 }
 
 export default function ShoeSearch() {
+  const navigate = useNavigate();
   const { isAuthenticated, getAccessTokenSilently, loginWithRedirect } = useAuth0();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ShoeData[]>([]);
@@ -131,14 +136,11 @@ export default function ShoeSearch() {
     }
   };
 
-  // Handle card click to show details
-  const handleCardClick = (shoe: ShoeData) => {
-    setSelectedShoe(shoe);
-  };
-
-  // Close detail view
-  const closeDetail = () => {
-    setSelectedShoe(null);
+  // Handle card click to navigate to shoe detail page
+  const handleViewClick = (shoe: ShoeData) => {
+    // Generate unique ID from title if not available
+    const shoeId = shoe.id || encodeURIComponent(shoe.title.toLowerCase().replace(/\s+/g, '-'));
+    navigate(`/shoe/${shoeId}`, { state: { shoe } });
   };
 
   // Add shoe to favorites
@@ -279,137 +281,70 @@ export default function ShoeSearch() {
         </div>
       )}
 
-      {/* Results */}
+      {/* Results - New Card-based UI */}
       {!isLoading && !error && results.length > 0 && !selectedShoe && (
-        <div className="results-grid">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {results.map((shoe, index) => (
-            <div key={index} className="shoe-card">
-              <div className="shoe-image-container" onClick={() => handleCardClick(shoe)}>
-                {shoe.image_url ? (
-                  <img src={shoe.image_url} alt={shoe.title} className="shoe-image" />
-                ) : (
-                  <div className="bg-muted text-muted-foreground flex items-center justify-center h-full">No image available</div>
-                )}
-                {calculateSavings(shoe.retail_price, shoe.market_price) !== "0%" &&
-                  calculateSavings(shoe.retail_price, shoe.market_price) !== "N/A" && (
-                    <div className="discount-badge">
-                      Save {calculateSavings(shoe.retail_price, shoe.market_price)}
-                    </div>
-                  )}
-              </div>
-              <div className="shoe-details">
-                <h3 className="shoe-title">{shoe.title}</h3>
-                <p className="shoe-brand">
-                  <Tag className="brand-icon" /> {shoe.brand}
-                </p>
-                <div className="price-section">
-                  <div>
-                    <span className="retail-price">Retail Price: </span>
-                    <span className="retail-price">{formatPrice(shoe.retail_price)}</span>
+            <Card key={index} className="overflow-hidden bg-white hover:border-[#9b87f5]/70 transition-all duration-300 transform hover:-translate-y-1">
+              <div className="relative">
+                {/* Image container */}
+                <div className="relative pb-[75%] bg-white">
+                  <img
+                    src={shoe.image_url}
+                    alt={shoe.title}
+                    className="absolute inset-0 w-full h-full object-contain"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`absolute top-2 right-2 rounded-full ${
+                      isInFavorites(shoe.title) ? "text-red-500" : "text-gray-400 hover:text-red-500"
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFavoriteClick(shoe);
+                    }}
+                    disabled={favoriteActionLoading}
+                  >
+                    <Heart fill={isInFavorites(shoe.title) ? "currentColor" : "none"} size={20} />
+                  </Button>
+                </div>
+                
+                {/* Content */}
+                <div className="p-3">
+                  <h3 className="font-medium text-gray-800 mb-1">{shoe.title}</h3>
+                  <div className="text-xs text-gray-600 mb-1">
+                    Lowest Ask
                   </div>
-                  <div>
-                    <span className="user-size">Your Size: </span>
-                    <span className="user-size">{shoe.user_size}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-gray-900">
+                      {formatPrice(shoe.market_price)}
+                    </div>
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      className="text-gray-700 hover:bg-gray-100"
+                      onClick={() => handleViewClick(shoe)}
+                    >
+                      View
+                    </Button>
+                  </div>
+                  <div className="text-xs flex items-center gap-1 mt-1.5 text-green-600">
+                    <CheckCircle2 size={14} />
+                    Size {shoe.user_size} Available
                   </div>
                 </div>
               </div>
-              <motion.button 
-                className={`favorite-button ${isInFavorites(shoe.title) ? 'favorited' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFavoriteClick(shoe);
-                }}
-                disabled={favoriteActionLoading}
-                whileTap={{ scale: 0.9 }}
-                whileHover={{ scale: 1.1 }}
-              >
-                {favoriteActionLoading ? (
-                  <Loader2 className="spinner" />
-                ) : (
-                  <Heart className={isInFavorites(shoe.title) ? "filled-heart" : ""} />
-                )}
-              </motion.button>
-            </div>
+            </Card>
           ))}
         </div>
       )}
 
+      {/* You can keep the detail view or remove if you'll handle it on a separate page */}
       {/* Detail View */}
       {selectedShoe && (
         <div className="detail-view">
-          <div className="detail-content">
-            <div className="detail-header">
-              <h2>{selectedShoe.title}</h2>
-              <button className="close-button" onClick={closeDetail}>
-                Close
-              </button>
-            </div>
-            <div className="detail-body">
-              <div className="detail-image-container">
-                {selectedShoe.image_url ? (
-                  <img src={selectedShoe.image_url} alt={selectedShoe.title} className="detail-image" />
-                ) : (
-                  <div>No image available</div>
-                )}
-              </div>
-              <div className="detail-info">
-                <p className="shoe-brand">
-                  <Tag className="brand-icon" /> {selectedShoe.brand}
-                </p>
-                <p
-                  className="shoe-description"
-                  dangerouslySetInnerHTML={{ __html: selectedShoe.description || "No description available" }}
-                />
-                <div className="price-grid">
-                  <div className="price-item">
-                    <span>Retail Price</span>
-                    <span>{formatPrice(selectedShoe.retail_price)}</span>
-                  </div>
-                  <div className="price-item">
-                    <span>Your Size</span>
-                    <span>{selectedShoe.user_size}</span>
-                  </div>
-                </div>
-                {calculateSavings(selectedShoe.retail_price, selectedShoe.market_price) !== "0%" &&
-                  calculateSavings(selectedShoe.retail_price, selectedShoe.market_price) !== "N/A" && (
-                    <div className="savings-banner">
-                      You save {calculateSavings(selectedShoe.retail_price, selectedShoe.market_price)} off retail price!
-                    </div>
-                  )}
-                <div className="action-buttons">
-                  <motion.button 
-                    className={`add-to-favorites ${isInFavorites(selectedShoe.title) ? 'favorited' : ''}`}
-                    onClick={() => handleFavoriteClick(selectedShoe)}
-                    disabled={favoriteActionLoading}
-                    whileTap={{ scale: 0.95 }}
-                    whileHover={{ 
-                      scale: 1.05,
-                      backgroundColor: isInFavorites(selectedShoe.title) ? 
-                        "rgba(255, 200, 200, 1)" : 
-                        "rgba(245, 245, 245, 1)" 
-                    }}
-                    animate={
-                      favoriteActionLoading ? 
-                      { scale: [1, 1.05, 1] } : 
-                      isInFavorites(selectedShoe.title) ? 
-                        { backgroundColor: "#fff0f0" } : 
-                        { backgroundColor: "white" }
-                    }
-                    transition={{ duration: 0.3 }}
-                  >
-                    {favoriteActionLoading ? (
-                      <Loader2 className="spinner" />
-                    ) : (
-                      <>
-                        <Heart className={isInFavorites(selectedShoe.title) ? "filled-heart" : "button-icon"} />
-                        {isInFavorites(selectedShoe.title) ? "Remove from Favorites" : "Add to Favorites"}
-                      </>
-                    )}
-                  </motion.button>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Your existing detail view code */}
         </div>
       )}
     </div>
