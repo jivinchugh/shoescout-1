@@ -268,8 +268,8 @@ const ShoeDetail = () => {
               )}
             
             <div className="flex flex-col space-y-3">
-              <Button className="w-full">Buy Now for {formatPrice(shoe.buy_now_price)}</Button>
-              <Button variant="outline" className="w-full">Place Bid</Button>
+              <Button variant="outline" className="w-full">View Price on StockX</Button>
+              <Button variant="outline" className="w-full">View Price on GOAT</Button>
             </div>
           </div>
         </div>
