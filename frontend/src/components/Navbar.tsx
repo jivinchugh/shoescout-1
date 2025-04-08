@@ -19,10 +19,20 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Settings, LogOut } from "lucide-react";
 
+// Add this function in your Navbar.tsx file
+const getInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .map(part => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .substring(0, 2); // Limit to 2 characters
+};
+
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { logout, user, isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, getAccessTokenSilently, user, logout } = useAuth0();
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
@@ -102,120 +112,117 @@ export function Navbar() {
       )}
     >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between">
-          <Link
-            to={isAuthenticated ? "/dashboard" : "/"}
-            className="relative z-10 flex items-center gap-2"
-          >
-            <img
-              src={logo}
-              className="App-logo w-8 h-8 md:w-10 md:h-10"
-              alt="logo"
-            />
-            <span className="font-display text-xl font-semibold text-gradient">
-              ShoeScout
-            </span>
-          </Link>
-
-          {/* Search Bar - Only visible when authenticated */}
-          {isAuthenticated && (
-            <form
-              onSubmit={handleSearch}
-              className="hidden md:flex flex-1 max-w-md mx-8"
+        {/* Use position relative to allow absolute positioning of the search */}
+        <div className="relative flex items-center justify-between h-14">
+          {/* Logo on the left */}
+          <div className="z-10">
+            <Link
+              to={isAuthenticated ? "/dashboard" : "/"}
+              className="relative flex items-center gap-2"
             >
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search for shoes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-10 pl-10 pr-4 rounded-md border border-input bg-background"
-                />
-              </div>
-            </form>
+              <img
+                src={logo}
+                className="App-logo w-8 h-8 md:w-10 md:h-10"
+                alt="logo"
+              />
+              <span className="font-display text-xl font-semibold text-gradient">
+                ShoeScout
+              </span>
+            </Link>
+          </div>
+
+          {/* Center search area - absolutely positioned */}
+          {isAuthenticated && (
+            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-4 hidden md:block">
+              <form onSubmit={handleSearch}>
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search for shoes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-10 pl-10 pr-4 rounded-md border border-input bg-background"
+                  />
+                </div>
+              </form>
+            </div>
           )}
 
-          {/* Desktop Navigation */}
-          <nav className="hidden items-center space-x-8 md:flex">
-            {/* Only show these links when not authenticated */}
-            {!isAuthenticated && (
-              <>
-                <a
-                  href="#features"
-                  className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
-                >
-                  Features
-                </a>
-                <a
-                  href="#testimonials"
-                  className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
-                >
-                  Testimonials
-                </a>
-                <a
-                  href="#team"
-                  className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
-                >
-                  Team
-                </a>
-              </>
-            )}
-
-            {/* Dashboard link - only visible when authenticated */}
-            {/* {isAuthenticated && (
-              <Link
-                to="/dashboard"
-                className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
-              >
-                Dashboard
-              </Link>
-            )} */}
-
-            {/* Favorites link - only visible when authenticated */}
-            {isAuthenticated && (
-              <Link
-                to="/favorites"
-                className="favorites-button text-sm font-medium text-foreground/80 transition-colors hover:text-primary flex items-center gap-1"
-              >
-                <Heart className="h-4 w-4" /> Favorites
-              </Link>
-            )}
-
-            {!isAuthenticated && <LoginButton />}
-            <ThemeToggle />
-            {isAuthenticated && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="relative h-10 w-10 rounded-full"
+          {/* Navigation on the right */}
+          <div className="z-10 flex items-center">
+            <nav className="hidden items-center space-x-8 md:flex">
+              {/* Only show these links when not authenticated */}
+              {!isAuthenticated && (
+                <>
+                  <a
+                    href="#features"
+                    className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
                   >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.picture} alt="User" />
-                      <AvatarFallback className="bg-shoescout-purple text-white">
-                        US
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="flex items-center justify-start gap-2 p-2">
-                    <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {user.email}
-                      </p>
+                    Features
+                  </a>
+                  <a
+                    href="#testimonials"
+                    className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+                  >
+                    Testimonials
+                  </a>
+                  <a
+                    href="#team"
+                    className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+                  >
+                    Team
+                  </a>
+                </>
+              )}
+
+              {/* Favorites link - only visible when authenticated */}
+              {isAuthenticated && (
+                <Link
+                  to="/favorites"
+                  className="favorites-button text-sm font-medium text-foreground/80 transition-colors hover:text-primary flex items-center gap-1"
+                >
+                  <Heart className="h-4 w-4" /> Favorites
+                </Link>
+              )}
+
+              {!isAuthenticated && <LoginButton />}
+              <ThemeToggle />
+              {isAuthenticated && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="relative h-10 w-10 rounded-full"
+                    >
+                      <Avatar className="h-10 w-10">
+                        {/* Check if user and user.picture exist before trying to use them */}
+                        <AvatarImage
+                          src={user?.picture}
+                          alt={user?.name || "User"}
+                        />
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {/* Create initials from user name, or use default */}
+                          {user?.name ? getInitials(user.name) : "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="flex items-center justify-start gap-2 p-2">
+                      <div className="flex flex-col space-y-1 leading-none">
+                        <p className="font-medium">{user?.name || "User"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {user?.email || ""}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Account preferences</span>
-                  </DropdownMenuItem>
-                  
-                    
-                    <DropdownMenuItem 
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Account preferences</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
                       className="text-red-500 cursor-pointer"
                       onClick={() =>
                         logout({
@@ -226,41 +233,21 @@ export function Navbar() {
                       <LogOut className="mr-2 h-4 w-4" />
                       Log out
                     </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-           
-          </nav>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </nav>
 
-          {/* Mobile Menu Toggle */}
-          <div className="flex items-center md:hidden">
-            {/* Mobile search button - only visible when authenticated */}
-            {isAuthenticated && (
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="mr-2 p-2 text-foreground/80 hover:text-primary"
+            {/* Mobile menu toggle */}
+            <div className="flex items-center md:hidden">
+              <Button
+                variant="ghost"
+                className="relative h-10 w-10 rounded-full"
+                onClick={toggleMobileMenu}
               >
-                <Search className="h-5 w-5" />
-              </button>
-            )}
-
-            {/* Favorites button for mobile - only visible when authenticated */}
-            {isAuthenticated && (
-              <Link
-                to="/favorites"
-                className="favorites-button mr-2 p-2 text-foreground/80 hover:text-primary"
-              >
-                <Heart className="h-5 w-5" />
-              </Link>
-            )}
-            <ThemeToggle />
-            <button
-              onClick={toggleMobileMenu}
-              className="ml-2 rounded-full p-2 text-foreground hover:bg-secondary"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? <X /> : <Menu />}
-            </button>
+                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
