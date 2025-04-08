@@ -142,7 +142,10 @@ const Dashboard = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.05 }}
                     >
-                      <Card className="overflow-hidden bg-white hover:border-[#9b87f5]/70 transition-all duration-300 transform hover:-translate-y-1">
+                      <Card 
+                        className="overflow-hidden bg-white hover:border-[#9b87f5]/70 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
+                        onClick={() => handleViewClick(shoe)}
+                      >
                         <div className="relative">
                           {/* Image container */}
                           <div className="relative pb-[75%] bg-white">
@@ -156,7 +159,7 @@ const Dashboard = () => {
                                 isInFavorites(shoe.title) ? "text-red-500" : "text-gray-400 hover:text-red-500"
                               }`}
                               onClick={(e) => {
-                                e.stopPropagation();
+                                e.stopPropagation(); // Prevent card click from triggering
                                 handleFavoriteClick(shoe);
                               }}
                             >
@@ -174,12 +177,6 @@ const Dashboard = () => {
                               <div className="font-bold text-gray-900">
                                 {formatPrice(shoe.retail_price)}
                               </div>
-                              <button 
-                                className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm"
-                                onClick={() => handleViewClick(shoe)}
-                              >
-                                View
-                              </button>
                             </div>
                             <div className="text-xs flex items-center gap-1 mt-1.5 text-green-600">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
