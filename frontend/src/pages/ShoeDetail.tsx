@@ -211,16 +211,21 @@ const ShoeDetail = () => {
             <div className="flex items-center justify-between mb-2">
               <h1 className="text-2xl font-bold">{shoe.title}</h1>
               <motion.button
-                className={`favorite-button-round ${isInFavorites() ? 'favorited' : ''}`}
+                // className={`${isInFavorites() ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-400 hover:text-red-500'}`}
                 onClick={handleFavoriteToggle}
                 disabled={favoriteActionLoading}
                 whileTap={{ scale: 0.9 }}
                 whileHover={{ scale: 1.1 }}
               >
                 {favoriteActionLoading ? (
-                  <Loader2 className="spinner" />
+                  <Loader2 className="animate-spin" size={24} />
                 ) : (
-                  <Heart className={isInFavorites() ? "filled-heart" : ""} size={24} />
+                  <Heart 
+                    size={24} 
+                    fill={isInFavorites() ? "red" : "none"} 
+                    stroke = {isInFavorites() ? "red" : "gray"}
+                    strokeWidth={2}
+                  />
                 )}
               </motion.button>
             </div>
