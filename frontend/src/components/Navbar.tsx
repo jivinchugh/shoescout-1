@@ -17,9 +17,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings, LogOut } from "lucide-react";
+import { Settings, LogOut, Ruler } from "lucide-react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
-// Add this function in your Navbar.tsx file
 const getInitials = (name: string): string => {
   return name
     .split(' ')
@@ -30,6 +40,11 @@ const getInitials = (name: string): string => {
 };
 
 export function Navbar() {
+  // Add state for shoe size
+  const [shoeSize, setShoeSize] = useState<string>("");
+  const [isUpdatingSize, setIsUpdatingSize] = useState(false);
+  const [showSizeDialog, setShowSizeDialog] = useState(false);
+  
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, getAccessTokenSilently, user, logout } = useAuth0();
@@ -41,6 +56,68 @@ export function Navbar() {
 
   const isDashboard = location.pathname === "/dashboard";
 
+  // Fetch the user's shoe size when component mounts
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchUserShoeSize();
+    }
+  }, [isAuthenticated, user]);
+
+  const fetchUserShoeSize = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch(
+        `http://localhost:8080/api/shoe-size`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const userData = await response.json();
+        if (userData.shoeSize) {
+          setShoeSize(userData.shoeSize.toString());
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch user shoe size:", error);
+    }
+  };
+
+  const updateShoeSize = async () => {
+    if (!shoeSize) return;
+    
+    setIsUpdatingSize(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch(
+        `http://localhost:8080/api/shoe-size`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ shoeSize: parseFloat(shoeSize) }),
+        }
+      );
+
+      if (response.ok) {
+        // Close the dialog on success
+        setShowSizeDialog(false);
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to update shoe size:", errorData);
+      }
+    } catch (error) {
+      console.error("Error updating shoe size:", error);
+    } finally {
+      setIsUpdatingSize(false);
+    }
+  };
+  
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -217,11 +294,85 @@ export function Navbar() {
                         </p>
                       </div>
                     </div>
+                    
                     <DropdownMenuSeparator />
+                    
+                    {/* Shoe Size Dialog */}
+                    <Dialog open={showSizeDialog} onOpenChange={setShowSizeDialog}>
+                      <DialogTrigger asChild>
+                        <DropdownMenuItem
+                          className="cursor-default py-3" /* Changed from cursor-pointer to cursor-default */
+                          onSelect={(e) => {
+                            e.preventDefault(); // Prevent the dropdown from closing
+                          }}
+                        >
+                          <div className="flex w-full items-center justify-between">
+                            <div className="flex items-center">
+                              <Ruler className="mr-2 h-4 w-4" />
+                              <span>
+                                Shoe Size: <span className="font-medium">{shoeSize || "Not set"}</span>
+                              </span>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-7 text-xs cursor-pointer hover:bg-primary/10 transition-colors" /* Added hover effect explicitly to button */
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowSizeDialog(true);
+                              }}
+                            >
+                              Update
+                            </Button>
+                          </div>
+                        </DropdownMenuItem>
+                      </DialogTrigger>
+                      <DialogContent className="w-[95vw] max-w-[425px] sm:w-full">
+                        <DialogHeader>
+                          <DialogTitle>Update Your Shoe Size</DialogTitle>
+                          <DialogDescription>
+                            Set your shoe size to get personalized recommendations.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                            <Label htmlFor="shoe-size" className="sm:text-right">
+                              Shoe Size
+                            </Label>
+                            <Input
+                              id="shoe-size"
+                              type="text"
+                              inputMode="decimal"
+                              value={shoeSize}
+                              onChange={(e) => setShoeSize(e.target.value)}
+                              placeholder="e.g., 10, 10.5, EU 44"
+                              className="col-span-1 sm:col-span-3"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter className="flex-col space-y-2 sm:space-y-0 sm:flex-row">
+                          <Button onClick={() => setShowSizeDialog(false)} variant="outline" className="w-full sm:w-auto">
+                            Cancel
+                          </Button>
+                          <Button onClick={updateShoeSize} disabled={isUpdatingSize} className="w-full sm:w-auto">
+                            {isUpdatingSize ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              "Save"
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    
                     <DropdownMenuItem className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Account preferences</span>
                     </DropdownMenuItem>
+                    
                     <DropdownMenuItem
                       className="text-red-500 cursor-pointer"
                       onClick={() =>
@@ -252,7 +403,7 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Rest of your code remains unchanged */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-background pt-20">
           <div className="container mx-auto px-4">
