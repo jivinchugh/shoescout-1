@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const { createUser, getUser, saveUserShoeSize, getUserShoeSize, addFavoriteShoe, removeFavoriteShoe, getUserFavorites } = require('./models/user');
 const axios = require('axios');
+const retryRequest = require('./retryAxios');
 
 // author and version from our package.json file
 const { author, version } = require('../package.json');
@@ -37,95 +38,125 @@ app.get('/', (req, res) => {
   });
 });
 
-// Public endpoint to fetch shoes data
-app.get('/shoes/:query', checkJwt, extractAuth0Id, async (req, res) => {
-  const { query } = req.params;
+function normalizeResellData(apiData) {
+  const lowest = apiData?.lowestResellPrice || {};
+  const links = apiData?.resellLinks || {};
+  const prices = apiData?.resellPrices || {};
 
-  // Replace dashes with spaces for better search
-  const formattedQuery = query.replace(/-/g, ' ');
+  const fallbackPrices = (() => {
+    const brands = ['stockX', 'goat', 'flightClub', 'stadiumGoods'];
+    const fallback = {};
+    brands.forEach(brand => {
+      const data = prices[brand];
+      if (Array.isArray(data)) {
+        const valid = data.filter(p => typeof p.price === 'number');
+        if (valid.length) fallback[brand] = Math.min(...valid.map(v => v.price));
+      } else if (data?.newLowestPrice?.value) {
+        fallback[brand] = data.newLowestPrice.value / 100;
+      }
+    });
+    return fallback;
+  })();
 
-  // Fetch user shoe size from DB
-  let userShoeSize;
-  try {
-    const user = await getUserShoeSize(req.auth0Id);
-    if (!user) {
-      return res.status(404).json({ error: 'No shoe size found for this user' });
-    }
-    userShoeSize = user.shoeSize;
-  } catch (err) {
-    logger.error('Error fetching user shoe size:', err);
-    return res.status(500).json({ error: 'Internal Server Error' });
-  }
+  const resellPrices = Object.keys(lowest).length ? lowest : fallbackPrices;
 
-  // StockX API options
-  const options = {
+  return {
+    lowest_resell_prices: {
+      stockX: resellPrices.stockX || null,
+      goat: resellPrices.goat || null,
+      flightClub: resellPrices.flightClub || null,
+      stadiumGoods: resellPrices.stadiumGoods || null
+    },
+    resell_links: {
+      stockX: links.stockX || '',
+      goat: links.goat || '',
+      flightClub: links.flightClub || '',
+      stadiumGoods: links.stadiumGoods || ''
+    },
+    resell_data_found: Object.values(resellPrices).some(p => p !== null && p !== undefined)
+  };
+}
+
+app.get('/shoes/:query', async (req, res) => {
+  const query = req.params.query;
+  const retailOptions = {
     method: 'GET',
-    url: 'https://stockx-api.p.rapidapi.com/search',
-    params: {
-      query: formattedQuery,
-      page: 1,
-      limit: 10, // Fetch up to 10 results
-    },
+    url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(query)}`,
     headers: {
-      'Accept': 'application/json',
       'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
-      'X-RapidAPI-Host': process.env.STOCKX_API_HOST,
-      'User-Agent': 'Mozilla/5.0',
-    },
+      'X-RapidAPI-Host': process.env.STOCKX_API_HOST
+    }
   };
 
   try {
-    const response = await axios.request(options);
-    if (!response.data || !response.data.hits) {
-      return res.status(404).json({ error: 'No shoes found for the given query' });
-    }
+    const retailRes = await retryRequest(retailOptions);
+    if (!retailRes.data?.hits) return res.status(404).json({ error: 'No shoes found.' });
 
-    // Process multiple shoes (up to 10)
-    const shoes = response.data.hits.slice(0, 10).map((shoe) => {
-      const variants = shoe.variants || [];
+    const results = await Promise.all(retailRes.data.hits.slice(0, 10).map(async (shoe) => {
+      const { title, retailPrice, description = '', sku = '' } = shoe;
+      const cleanedTitle = title.replace(/\s*\(.*?\)/g, '').trim();
 
-      // Find the variant with the requested size
-      const sizeVariant = variants.find((variant) => variant.size === userShoeSize);
+      let normalizedResellData = {
+        lowest_resell_prices: {},
+        resell_links: {},
+        resell_data_found: false
+      };
 
-      // Extract pricing information
-      const marketPrice =
-        sizeVariant && sizeVariant.market
-          ? sizeVariant.market.price
-          : shoe.market && shoe.market.price
-            ? shoe.market.price
-            : 'N/A';
+      logger.debug(`Trying resell API with styleId=${sku}`);
+      try {
+        const skuRes = await retryRequest({
+          method: 'GET',
+          url: `https://${process.env.SNEAKER_DB_API_HOST}/productprice`,
+          params: { styleId: sku },
+          headers: {
+            'X-RapidAPI-Key': process.env.SNEAKER_DB_API_KEY,
+            'X-RapidAPI-Host': process.env.SNEAKER_DB_API_HOST,
+          },
+        });
+        if (skuRes.data) {
+          normalizedResellData = normalizeResellData(skuRes.data);
+        }
+      } catch (err) {
+        logger.debug(`SKU lookup failed for ${sku}, falling back to search: ${err.message}`);
+      }
 
-      // Look for "Buy Now" price in various possible locations
-      let buyNowPrice = 'N/A';
-      if (sizeVariant) {
-        if (sizeVariant.lowestAsk) buyNowPrice = sizeVariant.lowestAsk;
-        else if (sizeVariant.buyNow) buyNowPrice = sizeVariant.buyNow;
-        else if (sizeVariant.ask) buyNowPrice = sizeVariant.ask;
-      } else if (shoe) {
-        if (shoe.lowestAsk) buyNowPrice = shoe.lowestAsk;
-        else if (shoe.buyNow) buyNowPrice = shoe.buyNow;
-        else if (shoe.ask) buyNowPrice = shoe.ask;
+      if (!normalizedResellData.resell_data_found) {
+        try {
+          const searchRes = await retryRequest({
+            method: 'GET',
+            url: `https://${process.env.SNEAKER_DB_API_HOST}/search`,
+            params: { query: cleanedTitle },
+            headers: {
+              'X-RapidAPI-Key': process.env.SNEAKER_DB_API_KEY,
+              'X-RapidAPI-Host': process.env.SNEAKER_DB_API_HOST,
+            }
+          });
+          if (searchRes.data?.hits) {
+            const match = searchRes.data.hits.find(item => item.styleID?.toLowerCase() === sku.toLowerCase()) ||
+              searchRes.data.hits.find(item => item.styleID?.includes(sku) || sku.includes(item.styleID));
+            if (match) {
+              normalizedResellData = normalizeResellData(match);
+            }
+          }
+        } catch (err) {
+          logger.warn(`Fallback search failed for ${cleanedTitle}: ${err.message}`);
+        }
       }
 
       return {
-        title: shoe.title || 'No title available',
-        description: shoe.description || 'No description available',
+        title,
         retail_price: shoe.retail_price || 'N/A',
-        market_price: marketPrice,
-        buy_now_price: buyNowPrice,
-        user_size: userShoeSize, // Include the size searched for
-        brand: shoe.brand || 'N/A',
-        image_url: shoe.image || null,
+        description,
+        sku,
+        image_url: shoe.image || '',
+        ...normalizedResellData
       };
-    });
+    }));
 
-    res.json(shoes); // Return an array of shoes
-  } catch (error) {
-    console.error('Error fetching shoes:', error);
-    res.status(500).json({
-      error: 'Failed to fetch shoes data',
-      details: error.message,
-    });
+    res.json(results);
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ error: 'Failed to fetch shoe data' });
   }
 });
 
