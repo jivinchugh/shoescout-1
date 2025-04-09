@@ -145,7 +145,7 @@ app.get('/shoes/:query', async (req, res) => {
 
       return {
         title,
-        retail_price: retailPrice,
+        retail_price: shoe.retail_price || 'N/A',
         description,
         sku,
         image_url: shoe.image || '',
