@@ -194,6 +194,19 @@ protectedRouter.post('/shoe-size', async (req, res) => {
   if (typeof shoeSize !== 'number') {
     return res.status(400).json({ error: 'Shoe size must be a number' });
   }
+  
+  // Add validation for decimal values and max size
+  if (shoeSize <= 0 || shoeSize > 15) {
+    return res.status(400).json({ error: 'Shoe size must be between 0 and 15' });
+  }
+  
+  // Check if it's a whole number or ends with .5
+  const isValid = Number.isInteger(shoeSize) || 
+                  (shoeSize * 10) % 5 === 0; // Checks if decimal part is .0 or .5
+                  
+  if (!isValid) {
+    return res.status(400).json({ error: 'Shoe size must be a whole number or end with .5' });
+  }
 
   try {
     const user = await saveUserShoeSize(req.auth0Id, shoeSize);

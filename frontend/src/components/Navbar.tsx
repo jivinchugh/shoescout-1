@@ -89,6 +89,18 @@ export function Navbar() {
   const updateShoeSize = async () => {
     if (!shoeSize) return;
     
+    // Validate shoe size is a valid number and follows the required pattern
+    const shoeSizeNum = parseFloat(shoeSize);
+    
+    // Check if it's a valid number and follows our pattern (whole number or .5)
+    if (isNaN(shoeSizeNum) || 
+        !(Number.isInteger(shoeSizeNum) || shoeSizeNum.toString().endsWith('.5')) ||
+        shoeSizeNum <= 0 || 
+        shoeSizeNum > 15) {
+      console.error("Invalid shoe size format. Must be a positive number up to 15, with only .5 as decimal");
+      return;
+    }
+    
     setIsUpdatingSize(true);
     try {
       const token = await getAccessTokenSilently();
@@ -100,7 +112,7 @@ export function Navbar() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ shoeSize: parseFloat(shoeSize) }),
+          body: JSON.stringify({ shoeSize: shoeSizeNum }),
         }
       );
 
@@ -331,7 +343,7 @@ export function Navbar() {
                         <DialogHeader>
                           <DialogTitle>Update Your Shoe Size</DialogTitle>
                           <DialogDescription>
-                            Set your shoe size to get personalized recommendations.
+                            Set your shoe size to get personalized recommendations. 
                           </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
@@ -344,10 +356,22 @@ export function Navbar() {
                               type="text"
                               inputMode="decimal"
                               value={shoeSize}
-                              onChange={(e) => setShoeSize(e.target.value)}
-                              placeholder="e.g., 10, 10.5, EU 44"
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                // Allow only whole numbers or numbers ending with .5
+                                // Also enforce maximum of 15
+                                if (value === '' || (/^\d+\.?5?$/.test(value) && parseFloat(value) <= 15)) {
+                                  setShoeSize(value);
+                                }
+                              }}
+                              placeholder="e.g., 10, 10.5 (max 15)"
                               className="col-span-1 sm:col-span-3"
                             />
+                            <p className="col-span-1 sm:col-span-4 sm:col-start-2 text-xs text-muted-foreground mt-1">
+                              * Maximum size is 15. 
+                              <br />
+                              * Only whole numbers or half sizes are accepted.
+                            </p>
                           </div>
                         </div>
                         <DialogFooter className="flex-col space-y-2 sm:space-y-0 sm:flex-row">
