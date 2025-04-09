@@ -45,6 +45,9 @@ export function Navbar() {
   const [isUpdatingSize, setIsUpdatingSize] = useState(false);
   const [showSizeDialog, setShowSizeDialog] = useState(false);
   
+  // Add a temporary state for the dialog input
+  const [tempShoeSize, setTempShoeSize] = useState<string>("");
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, getAccessTokenSilently, user, logout } = useAuth0();
@@ -83,6 +86,58 @@ export function Navbar() {
       }
     } catch (error) {
       console.error("Failed to fetch user shoe size:", error);
+    }
+  };
+
+  // Set the tempShoeSize when the dialog opens
+  useEffect(() => {
+    if (showSizeDialog) {
+      setTempShoeSize(shoeSize);
+    }
+  }, [showSizeDialog, shoeSize]);
+
+  // Update the actual shoeSize only when Save is clicked
+  const handleSaveShoeSize = async () => {
+    // Use tempShoeSize instead of shoeSize
+    const shoeSizeNum = parseFloat(tempShoeSize);
+    
+    // Validation
+    if (isNaN(shoeSizeNum) || 
+        !(Number.isInteger(shoeSizeNum) || shoeSizeNum.toString().endsWith('.5')) ||
+        shoeSizeNum <= 0 || 
+        shoeSizeNum > 15) {
+      console.error("Invalid shoe size format");
+      return;
+    }
+    
+    setIsUpdatingSize(true);
+    try {
+      // API call with tempShoeSize
+      const token = await getAccessTokenSilently();
+      const response = await fetch(
+        `http://localhost:8080/api/shoe-size`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ shoeSize: shoeSizeNum }),
+        }
+      );
+
+      if (response.ok) {
+        // Only update the actual shoeSize on successful API response
+        setShoeSize(tempShoeSize);
+        setShowSizeDialog(false);
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to update shoe size:", errorData);
+      }
+    } catch (error) {
+      console.error("Error updating shoe size:", error);
+    } finally {
+      setIsUpdatingSize(false);
     }
   };
 
@@ -355,21 +410,17 @@ export function Navbar() {
                               id="shoe-size"
                               type="text"
                               inputMode="decimal"
-                              value={shoeSize}
+                              value={tempShoeSize}
                               onChange={(e) => {
                                 const value = e.target.value;
-                                // Allow only whole numbers or numbers ending with .5
-                                // Also enforce maximum of 15
                                 if (value === '' || (/^\d+\.?5?$/.test(value) && parseFloat(value) <= 15)) {
-                                  setShoeSize(value);
+                                  setTempShoeSize(value);
                                 }
                               }}
                               placeholder="e.g., 10, 10.5 (max 15)"
                               className="col-span-1 sm:col-span-3"
                             />
                             <p className="col-span-1 sm:col-span-4 sm:col-start-2 text-xs text-muted-foreground mt-1">
-                              * Maximum size is 15. 
-                              <br />
                               * Only whole numbers or half sizes are accepted.
                             </p>
                           </div>
@@ -378,7 +429,7 @@ export function Navbar() {
                           <Button onClick={() => setShowSizeDialog(false)} variant="outline" className="w-full sm:w-auto">
                             Cancel
                           </Button>
-                          <Button onClick={updateShoeSize} disabled={isUpdatingSize} className="w-full sm:w-auto">
+                          <Button onClick={handleSaveShoeSize} disabled={isUpdatingSize} className="w-full sm:w-auto">
                             {isUpdatingSize ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
