@@ -11,6 +11,7 @@ import { ShoeResultsProvider } from "./context/ShoeResultsProvider";
 import Favorites from "./pages/Favorites";
 import Dashboard from "./pages/Dashboard";
 import { useAuth0 } from "@auth0/auth0-react";
+import { ScrollToTop } from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+          <ScrollToTop />
             <Routes>
               <Route path="/" element={<Index />} />
               

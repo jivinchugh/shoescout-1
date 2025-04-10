@@ -8,7 +8,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import ShoeSizeForm from '@/components/ShoeSizeForm';
 import {BentoDemo} from '@/components/BentoFeatures';
 import ShoeSearch from '@/components/ShoeSearch';
-import Home from '@/components/Home';
+import Home from './Home';
 
 const Index = () => {
   

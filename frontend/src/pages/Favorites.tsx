@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Loader2, Tag } from "lucide-react";
+import { Heart, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthLayout } from "../components/AuthLayout";
 import "../components/Searchstyles.css";
-import { Card } from "@/components/ui/card";
+import { ShoeCard } from "@/components/ShoeCard";
 
 interface ShoeData {
     title: string;
@@ -41,19 +41,6 @@ const Favorites = () => {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         })}`;
-    };
-
-    // Calculate savings percentage
-    const calculateSavings = (retail: string | number, market: string | number): string => {
-        if (retail === "N/A" || market === "N/A") return "N/A";
-
-        const retailPrice = typeof retail === "string" ? Number.parseFloat(retail) : retail;
-        const marketPrice = typeof market === "string" ? Number.parseFloat(market) : market;
-
-        if (isNaN(retailPrice) || isNaN(marketPrice) || retailPrice <= 0) return "N/A";
-
-        const savings = ((retailPrice - marketPrice) / retailPrice) * 100;
-        return savings <= 0 ? "0%" : `${Math.round(savings)}%`;
     };
 
     // Fetch favorites when component mounts
@@ -194,14 +181,11 @@ const Favorites = () => {
         }
     };
 
+    // Content to show when authenticated
     const content = (
-        <section className="relative pt-40 pb-16 overflow-hidden min-h-screen">
-            <div className="absolute inset-0 -z-10 overflow-hidden">
-                <div className="absolute -left-[10%] top-[20%] h-[40%] w-[50%] rounded-full bg-primary/10 blur-[120px]" />
-            </div>
-
-            <div className="container mx-auto px-4">
-                <div className="mx-auto max-w-2xl text-center mb-8">
+        <section className="relative pb-16 min-h-screen bg-white">
+            <div className="container mx-auto px-4 pt-4 pb-16">
+                <div className="mx-auto max-w-2xl text-center mb-8" style={{ marginTop: '6rem' }}>
                     <h2 className="text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl animate-slide-down">
                         My <span className="text-gradient">Favorite Shoes</span>
                     </h2>
@@ -249,76 +233,14 @@ const Favorites = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in max-w-6xl mx-auto">
                             <AnimatePresence>
                                 {favorites.map((shoe, index) => (
-                                    <motion.div
-                                        key={shoe.title}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                                    >
-                                        <Card
-                                            className="overflow-hidden bg-white hover:border-[#9b87f5]/70 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
-                                            onClick={() => handleCardClick(shoe)}
-                                        >
-                                            <div className="relative">
-                                                {/* Image container */}
-                                                <div className="relative pb-[75%] bg-white">
-                                                    {shoe.image_url ? (
-                                                        <img
-                                                            src={shoe.image_url}
-                                                            alt={shoe.title}
-                                                            className="absolute inset-0 w-full h-full object-contain p-2"
-                                                        />
-                                                    ) : (
-                                                        <div className="absolute inset-0 w-full h-full flex items-center justify-center text-gray-400">
-                                                            No image available
-                                                        </div>
-                                                    )}
-                                                    <button
-                                                        className="absolute top-2 right-2 rounded-full p-2 text-red-500"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation(); // Prevent card click from triggering
-                                                            removeFromFavorites(shoe.title);
-                                                        }}
-                                                        disabled={favoriteActionLoading && removingShoe === shoe.title}
-                                                    >
-                                                        {favoriteActionLoading && removingShoe === shoe.title ? (
-                                                            <Loader2 className="animate-spin" size={20} />
-                                                        ) : (
-                                                            <Heart fill="currentColor" size={20} />
-                                                        )}
-                                                    </button>
-
-                                                    {/* Show discount badge if applicable */}
-                                                    {calculateSavings(shoe.retail_price, shoe.market_price) !== "0%" &&
-                                                        calculateSavings(shoe.retail_price, shoe.market_price) !== "N/A" && (
-                                                            <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                                                                Save {calculateSavings(shoe.retail_price, shoe.market_price)}
-                                                            </div>
-                                                        )}
-                                                </div>
-
-                                                {/* Content */}
-                                                <div className="p-3">
-                                                    <h3 className="font-medium text-gray-800 mb-1">{shoe.title}</h3>
-                                                    <div className="text-xs text-gray-600 mb-1">
-                                                        Retail Price
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="font-bold text-gray-900">
-                                                            {formatPrice(shoe.retail_price)}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-xs flex items-center gap-1 mt-1.5 text-green-600">
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                            <path d="M5 14L8.23309 16.4248C8.66178 16.7463 9.26772 16.6728 9.60705 16.2581L18 6" />
-                                                        </svg>
-                                                        Size {shoe.user_size} Available
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </Card>
-                                    </motion.div>
+                                    <ShoeCard
+                                        key={index}
+                                        shoe={shoe}
+                                        index={index}
+                                        isFavorite={true}
+                                        onFavoriteClick={handleFavoriteToggle}
+                                        onCardClick={handleCardClick}
+                                    />
                                 ))}
                             </AnimatePresence>
                         </div>
@@ -332,10 +254,7 @@ const Favorites = () => {
     if (!isAuthenticated) {
         return (
             <AuthLayout>
-                <section className="relative pt-32 pb-16 min-h-[80vh] flex items-center">
-                    <div className="absolute inset-0 -z-10 overflow-hidden">
-                        <div className="absolute -left-[10%] top-[20%] h-[40%] w-[50%] rounded-full bg-primary/10 blur-[120px]" />
-                    </div>
+                <section className="relative pt-32 pb-16 min-h-[80vh] flex items-center bg-white">
                     <div className="container mx-auto px-4">
                         <div className="auth-prompt animate-fade-in max-w-md mx-auto text-center">
                             <h2 className="text-balance font-display text-3xl font-bold tracking-tight sm:text-4xl">
