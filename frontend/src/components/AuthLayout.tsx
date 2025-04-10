@@ -5,7 +5,7 @@ import { Footer } from './Footer';
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-screen flex-col bg-white">
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer hideLinks={true} />
