@@ -331,7 +331,10 @@ export function Navbar() {
               )}
 
               {!isAuthenticated && <LoginButton />}
-              <ThemeToggle />
+              
+              {/* Only show ThemeToggle when not authenticated */}
+              {!isAuthenticated && <ThemeToggle />}
+              
               {isAuthenticated && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
