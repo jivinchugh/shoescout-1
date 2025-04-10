@@ -188,93 +188,93 @@ const ShoeDetail = () => {
 
   return (
     <AuthLayout>
-      <div className="container mx-auto px-4 py-40">
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Image Section */}
-          <div className="bg-white rounded-lg p-8 flex items-center justify-center">
-            {shoe.image_url ? (
-              <img 
-                src={shoe.image_url} 
-                alt={shoe.title} 
-                className="max-h-[500px] object-contain"
-              />
-            ) : (
-              <div className="h-[400px] w-full flex items-center justify-center text-gray-400">
-                No image available
-              </div>
-            )}
-          </div>
-          
-          {/* Details Section */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h1 className="text-2xl font-bold">{shoe.title}</h1>
-              <motion.button
-                // className={`${isInFavorites() ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-400 hover:text-red-500'}`}
-                onClick={handleFavoriteToggle}
-                disabled={favoriteActionLoading}
-                whileTap={{ scale: 0.9 }}
-                whileHover={{ scale: 1.1 }}
-              >
-                {favoriteActionLoading ? (
-                  <Loader2 className="animate-spin" size={24} />
-                ) : (
-                  <Heart 
-                    size={24} 
-                    fill={isInFavorites() ? "red" : "none"} 
-                    stroke = {isInFavorites() ? "red" : "gray"}
-                    strokeWidth={2}
-                  />
-                )}
-              </motion.button>
-            </div>
-            
-            <p className="flex items-center text-gray-600 mb-6">
-              <Tag className="mr-2" size={16} /> {shoe.brand}
-            </p>
-            
-            {shoe.description && (
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold mb-2">Description</h2>
-                <div 
-                  className="prose"
-                  dangerouslySetInnerHTML={{ __html: shoe.description }}
+      <div className="bg-white min-h-screen">
+        <div className="container mx-auto px-4 py-40">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Image Section */}
+            <div className="bg-white rounded-lg p-8 flex items-center justify-center">
+              {shoe.image_url ? (
+                <img 
+                  src={shoe.image_url} 
+                  alt={shoe.title} 
+                  className="max-h-[500px] object-contain"
                 />
-              </div>
-            )}
-            
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Retail Price</p>
-                  <p className="text-xl font-bold">{formatPrice(shoe.retail_price)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Market Price</p>
-                  <p className="text-xl font-bold">{formatPrice(shoe.market_price)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Your Size</p>
-                  <p className="text-xl font-bold">{shoe.user_size}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Buy Now Price</p>
-                  <p className="text-xl font-bold">{formatPrice(shoe.buy_now_price)}</p>
-                </div>
-              </div>
-            </div>
-            
-            {calculateSavings(shoe.retail_price, shoe.market_price) !== "0%" &&
-              calculateSavings(shoe.retail_price, shoe.market_price) !== "N/A" && (
-                <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-md mb-6">
-                  You save {calculateSavings(shoe.retail_price, shoe.market_price)} off retail price!
+              ) : (
+                <div className="h-[400px] w-full flex items-center justify-center text-gray-400">
+                  No image available
                 </div>
               )}
+            </div>
             
-            <div className="flex flex-col space-y-3">
-              <Button variant="outline" className="w-full">View Price on StockX</Button>
-              <Button variant="outline" className="w-full">View Price on GOAT</Button>
+            {/* Details Section */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h1 className="text-2xl font-bold">{shoe.title}</h1>
+                <motion.button
+                  onClick={handleFavoriteToggle}
+                  disabled={favoriteActionLoading}
+                  whileTap={{ scale: 0.9 }}
+                  whileHover={{ scale: 1.1 }}
+                >
+                  {favoriteActionLoading ? (
+                    <Loader2 className="animate-spin" size={24} />
+                  ) : (
+                    <Heart 
+                      size={24} 
+                      fill={isInFavorites() ? "red" : "none"} 
+                      stroke = {isInFavorites() ? "red" : "gray"}
+                      strokeWidth={2}
+                    />
+                  )}
+                </motion.button>
+              </div>
+              
+              <p className="flex items-center text-gray-600 mb-6">
+                <Tag className="mr-2" size={16} /> {shoe.brand}
+              </p>
+              
+              {shoe.description && (
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold mb-2">Description</h2>
+                  <div 
+                    className="prose"
+                    dangerouslySetInnerHTML={{ __html: shoe.description }}
+                  />
+                </div>
+              )}
+              
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Retail Price</p>
+                    <p className="text-xl font-bold">{formatPrice(shoe.retail_price)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">StockX</p>
+                    <p className="text-xl font-bold">{formatPrice(shoe.market_price)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Your Size</p>
+                    <p className="text-xl font-bold">{shoe.user_size}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">GOAT</p>
+                    <p className="text-xl font-bold">{formatPrice(shoe.buy_now_price)}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {calculateSavings(shoe.retail_price, shoe.market_price) !== "0%" &&
+                calculateSavings(shoe.retail_price, shoe.market_price) !== "N/A" && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-md mb-6">
+                    You save {calculateSavings(shoe.retail_price, shoe.market_price)} off retail price!
+                  </div>
+                )}
+              
+              <div className="flex flex-col space-y-3">
+                <Button variant="outline" className="w-full">View Price on StockX</Button>
+                <Button variant="outline" className="w-full">View Price on GOAT</Button>
+              </div>
             </div>
           </div>
         </div>
