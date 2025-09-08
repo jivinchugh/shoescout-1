@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { AuthLayout } from "@/components/AuthLayout";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Heart, Loader2, ArrowLeft, Tag } from 'lucide-react';
+import { Heart, Loader2, ArrowLeft, Tag, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
@@ -10,12 +10,21 @@ interface ShoeData {
   title: string;
   description: string;
   retail_price: string | number;
-  market_price: string | number;
-  buy_now_price: string | number;
-  user_size: number;
-  brand: string;
   image_url: string;
-  id?: string;
+  user_size?: number;
+  sku?: string;
+  resell_links?: {
+    stockX?: string;
+    goat?: string;
+    flightClub?: string;
+    stadiumGoods?: string;
+  };
+  lowest_resell_prices?: {
+    stockX?: number;
+    goat?: number;
+    flightClub?: number;
+    stadiumGoods?: number;
+  };
 }
 
 const ShoeDetail = () => {
@@ -43,24 +52,24 @@ const ShoeDetail = () => {
     }
   }, [id, isAuthenticated]);
   
-  // Fetch shoe details from API if not provided via navigation
   const fetchShoeDetails = async () => {
     setIsLoading(true);
     try {
-      // You'll need to implement this API endpoint
       const token = await getAccessTokenSilently();
-      const response = await fetch(`http://localhost:8080/api/shoes/${id}`, {
+      const response = await fetch(`http://localhost:8080/shoes/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch shoe details");
-      }
-      
+
+      if (!response.ok) throw new Error("Failed to fetch shoe details");
+
       const data = await response.json();
-      setShoe(data);
+      if (Array.isArray(data) && data.length > 0) {
+        setShoe(data[0]); // If it returns an array, use the first item
+      } else {
+        setShoe(data);
+      }
     } catch (err) {
       console.error("Error fetching shoe details:", err);
       setError("Failed to load shoe details");
@@ -94,18 +103,17 @@ const ShoeDetail = () => {
     return favorites.some(fav => fav.title === shoe.title);
   };
   
-  // Format price with dollar sign and commas
+  // Function to format description text by removing <br> tags
+  const formatDescription = (description: string): string => {
+    if (!description) return '';
+    // Replace <br> tags with spaces
+    return description.replace(/<br>/g, ' ').trim();
+  };
+
   const formatPrice = (price: string | number | undefined): string => {
     if (!price || price === "N/A") return "N/A";
-
     const numPrice = typeof price === "string" ? Number.parseFloat(price) : price;
-
-    if (isNaN(numPrice)) return "N/A";
-
-    return `$${numPrice.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+    return isNaN(numPrice) ? "N/A" : `$${numPrice.toFixed(2)}`;
   };
   
   // Calculate savings percentage
@@ -233,36 +241,63 @@ const ShoeDetail = () => {
                 <Tag className="mr-2" size={16} /> {shoe.brand}
               </p>
               
+              {shoe.sku && (
+                <p className="text-sm text-gray-500 mb-2">SKU: {shoe.sku}</p>
+              )}
               {shoe.description && (
-                <div className="mb-6">
-                  <h2 className="text-lg font-semibold mb-2">Description</h2>
-                  <div 
-                    className="prose"
-                    dangerouslySetInnerHTML={{ __html: shoe.description }}
-                  />
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold mb-1">Description</h2>
+                  <p className="text-gray-700 text-sm">{formatDescription(shoe.description)}</p>
                 </div>
               )}
               
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Retail Price</p>
-                    <p className="text-xl font-bold">{formatPrice(shoe.retail_price)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">StockX</p>
-                    <p className="text-xl font-bold">{formatPrice(shoe.market_price)}</p>
-                  </div>
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Retail Price</p>
+                  <p className="text-xl font-bold">{formatPrice(shoe.retail_price)}</p>
+                </div>
+                {shoe.user_size && (
                   <div>
                     <p className="text-sm text-gray-500">Your Size</p>
                     <p className="text-xl font-bold">{shoe.user_size}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">GOAT</p>
-                    <p className="text-xl font-bold">{formatPrice(shoe.buy_now_price)}</p>
-                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Resell Prices Section */}
+            {shoe.lowest_resell_prices && Object.values(shoe.lowest_resell_prices).some(price => price) && (
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h2 className="text-lg font-semibold mb-2">Resell Prices</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {shoe.lowest_resell_prices.stockX && (
+                    <div>
+                      <p className="text-sm text-gray-500">StockX</p>
+                      <p className="text-xl font-bold">{formatPrice(shoe.lowest_resell_prices.stockX)}</p>
+                    </div>
+                  )}
+                  {shoe.lowest_resell_prices.goat && (
+                    <div>
+                      <p className="text-sm text-gray-500">GOAT</p>
+                      <p className="text-xl font-bold">{formatPrice(shoe.lowest_resell_prices.goat)}</p>
+                    </div>
+                  )}
+                  {shoe.lowest_resell_prices.flightClub && (
+                    <div>
+                      <p className="text-sm text-gray-500">Flight Club</p>
+                      <p className="text-xl font-bold">{formatPrice(shoe.lowest_resell_prices.flightClub)}</p>
+                    </div>
+                  )}
+                  {shoe.lowest_resell_prices.stadiumGoods && (
+                    <div>
+                      <p className="text-sm text-gray-500">Stadium Goods</p>
+                      <p className="text-xl font-bold">{formatPrice(shoe.lowest_resell_prices.stadiumGoods)}</p>
+                    </div>
+                  )}
                 </div>
               </div>
+            )}
               
               {calculateSavings(shoe.retail_price, shoe.market_price) !== "0%" &&
                 calculateSavings(shoe.retail_price, shoe.market_price) !== "N/A" && (
@@ -271,10 +306,48 @@ const ShoeDetail = () => {
                   </div>
                 )}
               
-              <div className="flex flex-col space-y-3">
-                <Button variant="outline" className="w-full">View Price on StockX</Button>
-                <Button variant="outline" className="w-full">View Price on GOAT</Button>
-              </div>
+            <div className="flex flex-col space-y-3">
+              {shoe.resell_links?.stockX && (
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center justify-center gap-2" 
+                  onClick={() => window.open(shoe.resell_links?.stockX, '_blank')}
+                >
+                  <ExternalLink size={16} />
+                  View on StockX
+                </Button>
+              )}
+              {shoe.resell_links?.goat && (
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center justify-center gap-2" 
+                  onClick={() => window.open(shoe.resell_links?.goat, '_blank')}
+                >
+                  <ExternalLink size={16} />
+                  View on GOAT
+                </Button>
+              )}
+              {shoe.resell_links?.flightClub && (
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center justify-center gap-2" 
+                  onClick={() => window.open(shoe.resell_links?.flightClub, '_blank')}
+                >
+                  <ExternalLink size={16} />
+                  View on Flight Club
+                </Button>
+              )}
+              {shoe.resell_links?.stadiumGoods && (
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center justify-center gap-2" 
+                  onClick={() => window.open(shoe.resell_links?.stadiumGoods, '_blank')}
+                >
+                  <ExternalLink size={16} />
+                  View on Stadium Goods
+                </Button>
+              )}
+            </div>
             </div>
           </div>
         </div>

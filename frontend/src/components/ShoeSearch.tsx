@@ -10,16 +10,30 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+// Update your ShoeData interface in ShoeSearch.tsx to include all necessary fields:
 interface ShoeData {
   title: string;
   description: string;
   retail_price: string | number;
-  market_price: string | number;
-  buy_now_price: string | number;
-  user_size: number;
-  brand: string;
+  market_price?: string | number;
+  buy_now_price?: string | number;
+  user_size?: number;
+  brand?: string;
   image_url: string;
-  id?: string; // Add this for navigation purposes
+  sku?: string;
+  resell_links?: {
+    stockX?: string;
+    goat?: string;
+    flightClub?: string;
+    stadiumGoods?: string;
+  };
+  lowest_resell_prices?: {
+    stockX?: number;
+    goat?: number;
+    flightClub?: number;
+    stadiumGoods?: number;
+  };
+  id?: string;
 }
 
 export default function ShoeSearch() {
@@ -96,45 +110,52 @@ export default function ShoeSearch() {
     return favorites.some(fav => fav.title === shoeTitle);
   };
 
-  // Handle the search form submission
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  // Then in your handleSearch function, make sure the API response data is properly processed:
+const handleSearch = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!query.trim()) return;
 
-    setIsLoading(true);
-    setError(null);
-    setResults([]);
+  setIsLoading(true);
+  setError(null);
+  setResults([]);
 
-    try {
-      const token = await getAccessTokenSilently();
+  try {
+    const token = await getAccessTokenSilently();
+    const formattedQuery = query.trim().replace(/\s+/g, "-");
 
-      // Format query for URL (replace spaces with dashes)
-      const formattedQuery = query.trim().replace(/\s+/g, "-");
+    const response = await fetch(`http://localhost:8080/shoes/${formattedQuery}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      // Make API call to backend
-      const response = await fetch(`http://localhost:8080/shoes/${formattedQuery}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch shoes");
-      }
-
-      const data = await response.json();
-
-      // If the API returns a single object, wrap it in an array
-      const resultsArray = Array.isArray(data) ? data : [data];
-      setResults(resultsArray);
-    } catch (err) {
-      console.error("Search error:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
-    } finally {
-      setIsLoading(false);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch shoes");
     }
-  };
+
+    const data = await response.json();
+    console.log("API response:", data); // For debugging
+
+    // If the API returns a single object, wrap it in an array
+    const resultsArray = Array.isArray(data) ? data : [data];
+
+    // Make sure each shoe has complete data
+    const processedResults = resultsArray.map(shoe => ({
+      ...shoe,
+      // Ensure these properties are defined
+      resell_links: shoe.resell_links || {},
+      lowest_resell_prices: shoe.lowest_resell_prices || {},
+    }));
+
+    setResults(processedResults);
+  } catch (err) {
+    console.error("Search error:", err);
+    setError(err instanceof Error ? err.message : "An unknown error occurred");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Handle card click to navigate to shoe detail page
   const handleViewClick = (shoe: ShoeData) => {
