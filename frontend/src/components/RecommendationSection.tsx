@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useUserPreferences } from "@/context/UserPreferencesProvider";
 import { Button } from "@/components/ui/button";
 import { Heart, Loader2, Settings, RefreshCw } from "lucide-react";
 import { ShoeCard } from "@/components/ShoeCard";
@@ -28,12 +29,12 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
 }) => {
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
+  const { userPreferences, setUserPreferences, fetchUserPreferences } = useUserPreferences();
   
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [showPreferencesDialog, setShowPreferencesDialog] = useState(false);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [userPreferences, setUserPreferences] = useState<string[]>([]);
 
   useEffect(() => {
     fetchUserPreferences();
@@ -44,24 +45,6 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
       fetchRecommendations();
     }
   }, [userPreferences]);
-
-  const fetchUserPreferences = async () => {
-    try {
-      const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserPreferences(data.preferences || []);
-      }
-    } catch (error) {
-      console.error('Error fetching user preferences:', error);
-    }
-  };
 
   const saveUserPreferences = async (brands: string[]) => {
     try {

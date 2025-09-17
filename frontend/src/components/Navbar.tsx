@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import LoginButton from "./auth/LoginButton";
 import LogoutButton from "./auth/LogoutButton";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useUserPreferences } from "@/context/UserPreferencesProvider";
 import logo from "@/components/brandLogos/_ACD37098-D53D-40DB-AEA0-52F68AB4128D_-removebg-preview.png";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -59,6 +60,7 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, getAccessTokenSilently, user, logout } = useAuth0();
+  const { hasPreferences, setUserPreferences } = useUserPreferences();
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
@@ -197,6 +199,8 @@ export function Navbar() {
       });
 
       if (response.ok) {
+        // Update the context with new preferences
+        setUserPreferences(selectedBrands);
         setShowRecommendationsModal(false);
         setDropdownOpen(false); // Ensure dropdown is closed
         // Don't reset selectedBrands here so they persist for next time
@@ -399,8 +403,8 @@ export function Navbar() {
                 </Link>
               )}
 
-              {/* Recommendations button - only visible when authenticated */}
-              {isAuthenticated && (
+              {/* Recommendations button - only visible when authenticated and has preferences */}
+              {isAuthenticated && hasPreferences && (
                 <button
                   onClick={() => {
                     // Navigate to home if not already there, then scroll to recommendations
@@ -697,14 +701,27 @@ export function Navbar() {
                 </Link>
               )}
 
-              {/* Add Recommendations link to mobile menu */}
-              {isAuthenticated && (
+              {/* Add Recommendations link to mobile menu - only when has preferences */}
+              {isAuthenticated && hasPreferences && (
                 <button
                   className="text-xl font-medium text-foreground transition-colors hover:text-primary flex items-center gap-2 text-left"
                   onClick={() => {
                     toggleMobileMenu();
-                    fetchCurrentPreferences(); // Load current preferences
-                    setShowRecommendationsModal(true);
+                    // Navigate to home if not already there, then scroll to recommendations
+                    if (location.pathname !== '/') {
+                      navigate('/');
+                      setTimeout(() => {
+                        const recommendationSection = document.querySelector('.home-recommendations-section');
+                        if (recommendationSection) {
+                          recommendationSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }, 100);
+                    } else {
+                      const recommendationSection = document.querySelector('.home-recommendations-section');
+                      if (recommendationSection) {
+                        recommendationSection.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }
                   }}
                 >
                   <Settings className="h-5 w-5" /> Recommendations

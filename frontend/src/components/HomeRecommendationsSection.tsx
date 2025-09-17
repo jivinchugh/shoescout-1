@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useUserPreferences } from "@/context/UserPreferencesProvider";
 import { Loader2, RefreshCw } from "lucide-react";
 import { DynamicCarousel } from "@/components/DynamicCarousel";
 import { Button } from "@/components/ui/button";
@@ -18,10 +19,10 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
 }) => {
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
+  const { userPreferences, fetchUserPreferences } = useUserPreferences();
   
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
-  const [userPreferences, setUserPreferences] = useState<string[]>([]);
 
   // Fisher-Yates shuffle algorithm for better randomization
   const shuffleArray = (array: any[]) => {
@@ -54,24 +55,6 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       window.removeEventListener('preferencesUpdated', handlePreferencesUpdate);
     };
   }, []);
-
-  const fetchUserPreferences = async () => {
-    try {
-      const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserPreferences(data.preferences || []);
-      }
-    } catch (error) {
-      console.error('Error fetching user preferences:', error);
-    }
-  };
 
   const fetchRecommendations = async () => {
     setLoadingRecommendations(true);
