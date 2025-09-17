@@ -142,7 +142,7 @@ export const DynamicCarousel: React.FC<DynamicCarouselProps> = ({
         >
           {displayedItems.map((shoe, index) => (
             <div
-              key={`${currentPage}-${index}`}
+              key={shoe.id || shoe.title || `shoe-${index}`}
               className="flex-shrink-0 transform transition-transform duration-300 hover:scale-[1.02]"
             >
               <ShoeCard

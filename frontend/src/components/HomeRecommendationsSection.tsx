@@ -22,7 +22,6 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [userPreferences, setUserPreferences] = useState<string[]>([]);
-  const [allRecommendations, setAllRecommendations] = useState<any[]>([]);
 
   // Fisher-Yates shuffle algorithm for better randomization
   const shuffleArray = (array: any[]) => {
@@ -87,9 +86,8 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       if (response.ok) {
         const data = await response.json();
         const allRecs = data.recommendations || [];
-        setAllRecommendations(allRecs);
         
-        // Shuffle the recommendations on every fetch for fresh content
+        // Shuffle the recommendations only once on initial load to avoid image changing
         const shuffledRecs = shuffleArray(allRecs);
         setRecommendations(shuffledRecs);
         
@@ -121,9 +119,8 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       if (response.ok) {
         const data = await response.json();
         const allRecs = data.recommendations || [];
-        setAllRecommendations(allRecs);
         
-        // Shuffle the new recommendations
+        // Shuffle the new recommendations to provide fresh content
         const shuffledRecs = shuffleArray(allRecs);
         setRecommendations(shuffledRecs);
         

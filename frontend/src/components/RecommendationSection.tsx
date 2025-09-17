@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Button } from "@/components/ui/button";
-import { Heart, Loader2, Settings } from "lucide-react";
+import { Heart, Loader2, Settings, RefreshCw } from "lucide-react";
 import { ShoeCard } from "@/components/ShoeCard";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -106,6 +106,31 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
     }
   };
 
+  // Function to manually refresh recommendations by fetching new data from API
+  const refreshRecommendations = async () => {
+    setLoadingRecommendations(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch('http://localhost:8080/api/recommendations', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRecommendations(data.recommendations || []);
+        console.log(`Refreshed with ${data.recommendations?.length || 0} new recommendations`);
+      } else {
+        console.error('Failed to refresh recommendations');
+      }
+    } catch (error) {
+      console.error('Error refreshing recommendations:', error);
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+
   const handleViewClick = (shoe: any) => {
     const shoeId = shoe.id || encodeURIComponent(shoe.title.toLowerCase().replace(/\s+/g, '-'));
     navigate(`/shoe/${shoeId}`, { state: { shoe } });
@@ -168,14 +193,25 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
             Based on your preferences: {userPreferences.join(', ')}
           </p>
         </div>
-        <Dialog open={showPreferencesDialog} onOpenChange={setShowPreferencesDialog}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Settings className="mr-2 h-4 w-4" />
-              Update Preferences
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-[425px] sm:w-full">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshRecommendations}
+            disabled={loadingRecommendations}
+            className="flex items-center gap-2 hover:bg-primary/5"
+          >
+            <RefreshCw className={`h-4 w-4 ${loadingRecommendations ? 'animate-spin' : ''}`} />
+            {loadingRecommendations ? 'Refreshing...' : 'Refresh'}
+          </Button>
+          <Dialog open={showPreferencesDialog} onOpenChange={setShowPreferencesDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="mr-2 h-4 w-4" />
+                Update Preferences
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[95vw] max-w-[425px] sm:w-full">
             <DialogHeader>
               <DialogTitle>Update Your Brand Preferences</DialogTitle>
               <DialogDescription>
@@ -192,8 +228,9 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
                 Update Preferences
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {loadingRecommendations ? (
