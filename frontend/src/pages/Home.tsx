@@ -6,6 +6,7 @@ import { HeroCarousel } from "@/components/homepage/HeroCarousel";
 import { useNavigate } from "react-router-dom";
 import { ShoeCard } from "@/components/ShoeCard";
 import { useAuth0 } from "@auth0/auth0-react";
+import HomeRecommendationsSection from "@/components/HomeRecommendationsSection";
 
 interface Shoe {
   id?: string;
@@ -309,6 +310,13 @@ export default function Home() {
               ))}
             </div>
           )}
+
+          {/* Recommendations Section */}
+          <HomeRecommendationsSection 
+            favorites={favorites}
+            onFavoriteClick={handleFavoriteToggle}
+            isInFavorites={isInFavorites}
+          />
         </div>
       </main>
     </div>
