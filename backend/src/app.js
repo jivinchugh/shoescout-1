@@ -2,8 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const { createUser, getUser, saveUserShoeSize, getUserShoeSize, addFavoriteShoe, removeFavoriteShoe, getUserFavorites } = require('./models/user');
-const axios = require('axios');
+const { createUser, getUser, saveUserShoeSize, getUserShoeSize, saveUserPreferences, addFavoriteShoe, removeFavoriteShoe, getUserFavorites } = require('./models/user');
 const retryRequest = require('./retryAxios');
 
 // author and version from our package.json file
@@ -247,6 +246,45 @@ protectedRouter.post('/shoe-size', async (req, res) => {
   }
 });
 
+// Get user's brand preferences (protected route)
+protectedRouter.get('/user-preferences', async (req, res) => {
+  try {
+    const user = await getUser(req.auth0Id);
+    res.status(200).json({
+      auth0Id: req.auth0Id,
+      preferences: user?.preferences || []
+    });
+  } catch (err) {
+    logger.error('Error fetching user preferences', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
+});
+
+// Save or update the user's brand preferences (protected route)
+protectedRouter.post('/user-preferences', async (req, res) => {
+  const { preferences } = req.body;
+
+  if (!Array.isArray(preferences)) {
+    return res.status(400).json({ error: 'Preferences must be an array' });
+  }
+
+  if (preferences.length > 3) {
+    return res.status(400).json({ error: 'Maximum 3 brand preferences allowed' });
+  }
+
+  try {
+    const user = await saveUserPreferences(req.auth0Id, preferences);
+    res.status(200).json({
+      auth0Id: user.auth0Id,
+      preferences: user.preferences,
+      message: 'Brand preferences saved successfully'
+    });
+  } catch (err) {
+    logger.error('Error saving user preferences', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
+});
+
 // Get user's favorite shoes
 protectedRouter.get('/favorites', async (req, res) => {
   try {
@@ -308,31 +346,44 @@ protectedRouter.get('/auth-check', (req, res) => {
   });
 });
 
-  // Recommendation endpoint: suggest shoes based on user's favorite brands
+  // Recommendation endpoint: suggest shoes based on user's preferences or favorite brands
   protectedRouter.get('/recommendations', async (req, res) => {
     try {
-      // Get user's favorites
-      const favorites = await getUserFavorites(req.auth0Id);
-      if (!favorites || favorites.length === 0) {
-        return res.status(200).json({ recommendations: [], message: 'No favorites found for user.' });
-      }
-
-      // Extract brands from favorites
-      const brandCounts = {};
-      favorites.forEach(fav => {
-        if (fav.brand) {
-          brandCounts[fav.brand] = (brandCounts[fav.brand] || 0) + 1;
+      // Get user's preferences first
+      const user = await getUser(req.auth0Id);
+      let brandsToUse = [];
+      
+      if (user?.preferences && user.preferences.length > 0) {
+        // Use user-selected preferences if available
+        brandsToUse = user.preferences;
+        logger.info(`Using user preferences for recommendations: ${brandsToUse.join(', ')}`);
+      } else {
+        // Fall back to extracting brands from favorites
+        const favorites = await getUserFavorites(req.auth0Id);
+        if (!favorites || favorites.length === 0) {
+          return res.status(200).json({ recommendations: [], message: 'No preferences or favorites found for user.' });
         }
-      });
-      // Sort brands by frequency
-      const sortedBrands = Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a]);
-      if (sortedBrands.length === 0) {
-        return res.status(200).json({ recommendations: [], message: 'No brand preferences found.' });
+
+        // Extract brands from favorites
+        const brandCounts = {};
+        favorites.forEach(fav => {
+          if (fav.brand) {
+            brandCounts[fav.brand] = (brandCounts[fav.brand] || 0) + 1;
+          }
+        });
+        
+        // Sort brands by frequency and take top 2
+        const sortedBrands = Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a]);
+        if (sortedBrands.length === 0) {
+          return res.status(200).json({ recommendations: [], message: 'No brand preferences found.' });
+        }
+        brandsToUse = sortedBrands.slice(0, 2);
+        logger.info(`Using brands from favorites for recommendations: ${brandsToUse.join(', ')}`);
       }
 
-      // Fetch recommended shoes for top brands (limit to top 2 brands)
+      // Fetch recommended shoes for the selected brands
       const recommended = [];
-      for (const brand of sortedBrands.slice(0, 2)) {
+      for (const brand of brandsToUse) {
         // Use the /shoes/:query endpoint logic to fetch shoes for the brand
         const retailOptions = {
           method: 'GET',
@@ -345,8 +396,8 @@ protectedRouter.get('/auth-check', (req, res) => {
         try {
           const retailRes = await retryRequest(retailOptions);
           if (retailRes.data?.hits) {
-            // Take top 3 shoes for each brand
-            const shoes = retailRes.data.hits.slice(0, 3).map(shoe => ({
+            // Take top 4 shoes for each brand to get more variety
+            const shoes = retailRes.data.hits.slice(0, 4).map(shoe => ({
               title: shoe.title,
               retail_price: shoe.retail_price || 'N/A',
               description: shoe.description || '',
@@ -360,7 +411,10 @@ protectedRouter.get('/auth-check', (req, res) => {
           logger.error(`Failed to fetch recommendations for brand ${brand}: ${err.message}`);
         }
       }
-      res.status(200).json({ recommendations: recommended });
+      
+      // Shuffle the recommendations to provide variety
+      const shuffled = recommended.sort(() => 0.5 - Math.random());
+      res.status(200).json({ recommendations: shuffled });
     } catch (err) {
       logger.error('Error generating recommendations', err);
       res.status(500).json({ error: 'Internal Server Error', details: err.message });

@@ -12,11 +12,13 @@ const logger = require('../logger');
  * @property {string} auth0Id - The Auth0 user ID.
  * @property {number} shoeSize - The shoe size of the user.
  * @property {Array<Object>} favorites - List of favorite shoes.
+ * @property {Array<string>} preferences - List of preferred brands.
  */
 
 const userSchema = new mongoose.Schema({
   auth0Id: { type: String, required: true, unique: true },
   shoeSize: { type: Number, required: true },
+  preferences: [{ type: String }], // Array of preferred brands
   favorites: [
     {
       title: { type: String, required: true },
@@ -154,6 +156,30 @@ async function getUserFavorites(auth0Id) {
   }
 }
 
+/**
+ * Saves user's brand preferences.
+ * @async
+ * @function saveUserPreferences
+ * @param {string} auth0Id - The Auth0 user ID.
+ * @param {Array<string>} preferences - Array of preferred brands.
+ * @returns {Promise<User>} The updated user with preferences.
+ * @throws Will throw an error if the operation fails.
+ */
+async function saveUserPreferences(auth0Id, preferences) {
+  try {
+    const user = await User.findOneAndUpdate(
+      { auth0Id },
+      { preferences },
+      { new: true, upsert: true }
+    );
+    logger.info(`Saved preferences for user ${auth0Id}: ${preferences.join(', ')}`);
+    return user;
+  } catch (error) {
+    logger.error('Error saving user preferences:', error);
+    throw error;
+  }
+}
+
 // Keep the legacy functions for backward compatibility
 async function createUser(username, shoeSize) {
   logger.warn('createUser is deprecated, use saveUserShoeSize instead');
@@ -181,6 +207,7 @@ async function getUser(username) {
 module.exports = {
   saveUserShoeSize,
   getUserShoeSize,
+  saveUserPreferences,
   addFavoriteShoe,
   removeFavoriteShoe,
   getUserFavorites,
