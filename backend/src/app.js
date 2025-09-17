@@ -383,38 +383,158 @@ protectedRouter.get('/auth-check', (req, res) => {
 
       // Fetch recommended shoes for the selected brands
       const recommended = [];
+      const targetPerBrand = Math.ceil(40 / brandsToUse.length); // Distribute 40 shoes across brands
+      
       for (const brand of brandsToUse) {
-        // Use the /shoes/:query endpoint logic to fetch shoes for the brand
-        const retailOptions = {
-          method: 'GET',
-          url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(brand)}`,
-          headers: {
-            'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
-            'X-RapidAPI-Host': process.env.STOCKX_API_HOST
+        let brandShoes = [];
+        
+        // Use specific shoe keywords to filter for shoes only
+        const shoeKeywords = ['sneakers', 'shoes', 'jordans', 'boots', 'running shoes', 'basketball shoes', 'tennis shoes'];
+        
+        for (const keyword of shoeKeywords) {
+          // If we already have enough shoes for this brand, break
+          if (brandShoes.length >= targetPerBrand) break;
+          
+          const retailOptions = {
+            method: 'GET',
+            url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(`${brand} ${keyword}`)}`,
+            headers: {
+              'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
+              'X-RapidAPI-Host': process.env.STOCKX_API_HOST
+            }
+          };
+          
+          try {
+            const retailRes = await retryRequest(retailOptions);
+            if (retailRes.data?.hits) {
+              // Filter out non-shoe items by checking title for shoe-related terms
+              const filteredShoes = retailRes.data.hits.filter(shoe => {
+                const title = shoe.title.toLowerCase();
+                
+                // Define shoe-related terms (must include at least one)
+                const shoeTerms = [
+                  'shoe', 'sneaker', 'jordan', 'air force', 'air max', 'air jordan',
+                  'runner', 'trainer', 'boot', 'loafer', 'oxford', 'slip-on',
+                  'sandal', 'flip-flop', 'cleat', 'basketball', 'tennis',
+                  'running', 'athletic', 'casual', 'formal', 'dress shoe',
+                  'pump', 'heel', 'flat', 'moccasin', 'espadrille', 'wedge'
+                ];
+                
+                // Define non-shoe items to exclude (if any of these are found, exclude the item)
+                const excludeTerms = [
+                  'bag', 'backpack', 'sock', 'socks', 'tote', 'purse', 'wallet',
+                  'belt', 'hat', 'cap', 'beanie', 'shirt', 'hoodie', 'jacket',
+                  'pants', 'shorts', 'gloves', 'scarf', 'card', 'trading card',
+                  'pokemon', 'pokémon', 'collectible', 'figurine', 'toy',
+                  'accessory', 'keychain', 'sticker', 'poster', 'phone case',
+                  'watch', 'sunglasses', 'necklace', 'bracelet', 'ring',
+                  'earring', 'underwear', 'brief', 'boxer', 'bra', 'panty'
+                ];
+                
+                // Check if title contains any shoe terms
+                const hasShoeTerms = shoeTerms.some(term => title.includes(term));
+                
+                // Check if title contains any exclude terms
+                const hasExcludeTerms = excludeTerms.some(term => title.includes(term));
+                
+                // Only include if it has shoe terms AND doesn't have exclude terms
+                return hasShoeTerms && !hasExcludeTerms;
+              });
+              
+              // Add shoes to brand collection, avoiding duplicates
+              for (const shoe of filteredShoes) {
+                if (brandShoes.length >= targetPerBrand) break;
+                
+                // Check for duplicates by title
+                const isDuplicate = brandShoes.some(existing => existing.title === shoe.title);
+                if (!isDuplicate) {
+                  brandShoes.push({
+                    title: shoe.title,
+                    retail_price: shoe.retail_price || 'N/A',
+                    description: shoe.description || '',
+                    sku: shoe.sku || '',
+                    image_url: shoe.image || '',
+                    brand: brand
+                  });
+                }
+              }
+            }
+          } catch (err) {
+            logger.error(`Failed to fetch recommendations for brand ${brand} with keyword ${keyword}: ${err.message}`);
           }
-        };
-        try {
-          const retailRes = await retryRequest(retailOptions);
-          if (retailRes.data?.hits) {
-            // Take top 4 shoes for each brand to get more variety
-            const shoes = retailRes.data.hits.slice(0, 4).map(shoe => ({
-              title: shoe.title,
-              retail_price: shoe.retail_price || 'N/A',
-              description: shoe.description || '',
-              sku: shoe.sku || '',
-              image_url: shoe.image || '',
-              brand: brand
-            }));
-            recommended.push(...shoes);
+        }
+        
+        // Add this brand's shoes to the overall collection
+        recommended.push(...brandShoes);
+        logger.info(`Added ${brandShoes.length} shoes for brand ${brand}`);
+      }
+      
+      // If we don't have exactly 40, trim or pad as needed
+      let finalRecommendations = [...recommended];
+      if (finalRecommendations.length > 40) {
+        // Shuffle first, then take exactly 40
+        for (let i = finalRecommendations.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [finalRecommendations[i], finalRecommendations[j]] = [finalRecommendations[j], finalRecommendations[i]];
+        }
+        finalRecommendations = finalRecommendations.slice(0, 40);
+      } else if (finalRecommendations.length < 40) {
+        // If we have fewer than 40, try to fetch more from a broader search
+        const additionalNeeded = 40 - finalRecommendations.length;
+        logger.info(`Need ${additionalNeeded} more shoes to reach 40 total`);
+        
+        // Broader search for popular shoe brands to fill the gap
+        const popularBrands = ['Nike', 'Adidas', 'Jordan', 'New Balance', 'Puma', 'Vans', 'Converse'];
+        
+        for (const brand of popularBrands) {
+          if (finalRecommendations.length >= 40) break;
+          
+          const retailOptions = {
+            method: 'GET',
+            url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(`${brand} shoes`)}`,
+            headers: {
+              'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
+              'X-RapidAPI-Host': process.env.STOCKX_API_HOST
+            }
+          };
+          
+          try {
+            const retailRes = await retryRequest(retailOptions);
+            if (retailRes.data?.hits) {
+              const filteredShoes = retailRes.data.hits.filter(shoe => {
+                const title = shoe.title.toLowerCase();
+                const hasShoeTerms = ['shoe', 'sneaker', 'jordan', 'air', 'runner', 'trainer', 'boot'].some(term => title.includes(term));
+                const hasExcludeTerms = ['bag', 'sock', 'card', 'pokemon', 'accessory'].some(term => title.includes(term));
+                const isDuplicate = finalRecommendations.some(existing => existing.title === shoe.title);
+                return hasShoeTerms && !hasExcludeTerms && !isDuplicate;
+              });
+              
+              for (const shoe of filteredShoes.slice(0, additionalNeeded)) {
+                if (finalRecommendations.length >= 40) break;
+                finalRecommendations.push({
+                  title: shoe.title,
+                  retail_price: shoe.retail_price || 'N/A',
+                  description: shoe.description || '',
+                  sku: shoe.sku || '',
+                  image_url: shoe.image || '',
+                  brand: brand
+                });
+              }
+            }
+          } catch (err) {
+            logger.error(`Failed to fetch additional shoes for brand ${brand}: ${err.message}`);
           }
-        } catch (err) {
-          logger.error(`Failed to fetch recommendations for brand ${brand}: ${err.message}`);
         }
       }
       
-      // Shuffle the recommendations to provide variety
-      const shuffled = recommended.sort(() => 0.5 - Math.random());
-      res.status(200).json({ recommendations: shuffled });
+      // Final shuffle of exactly 40 recommendations
+      for (let i = finalRecommendations.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [finalRecommendations[i], finalRecommendations[j]] = [finalRecommendations[j], finalRecommendations[i]];
+      }
+      
+      logger.info(`Returning exactly ${finalRecommendations.length} randomized recommendations`);
+      res.status(200).json({ recommendations: finalRecommendations });
     } catch (err) {
       logger.error('Error generating recommendations', err);
       res.status(500).json({ error: 'Internal Server Error', details: err.message });

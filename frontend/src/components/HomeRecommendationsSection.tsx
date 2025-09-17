@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Loader2 } from "lucide-react";
-import { ShoeCard } from "@/components/ShoeCard";
+import { Loader2, RefreshCw } from "lucide-react";
+import { DynamicCarousel } from "@/components/DynamicCarousel";
+import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 interface HomeRecommendationsSectionProps {
@@ -21,6 +22,17 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [userPreferences, setUserPreferences] = useState<string[]>([]);
+  const [allRecommendations, setAllRecommendations] = useState<any[]>([]);
+
+  // Fisher-Yates shuffle algorithm for better randomization
+  const shuffleArray = (array: any[]) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
 
   useEffect(() => {
     fetchUserPreferences();
@@ -74,7 +86,14 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
 
       if (response.ok) {
         const data = await response.json();
-        setRecommendations(data.recommendations || []);
+        const allRecs = data.recommendations || [];
+        setAllRecommendations(allRecs);
+        
+        // Shuffle the recommendations on every fetch for fresh content
+        const shuffledRecs = shuffleArray(allRecs);
+        setRecommendations(shuffledRecs);
+        
+        console.log(`Fetched and shuffled ${shuffledRecs.length} recommendations`);
       }
     } catch (error) {
       console.error('Error fetching recommendations:', error);
@@ -86,6 +105,37 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
   const handleViewClick = (shoe: any) => {
     const shoeId = shoe.id || encodeURIComponent(shoe.title.toLowerCase().replace(/\s+/g, '-'));
     navigate(`/shoe/${shoeId}`, { state: { shoe } });
+  };
+
+  // Function to manually refresh recommendations by fetching new data from API
+  const refreshRecommendations = async () => {
+    setLoadingRecommendations(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch('http://localhost:8080/api/recommendations', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const allRecs = data.recommendations || [];
+        setAllRecommendations(allRecs);
+        
+        // Shuffle the new recommendations
+        const shuffledRecs = shuffleArray(allRecs);
+        setRecommendations(shuffledRecs);
+        
+        console.log(`Refreshed with ${shuffledRecs.length} new recommendations`);
+      } else {
+        console.error('Failed to refresh recommendations');
+      }
+    } catch (error) {
+      console.error('Error refreshing recommendations:', error);
+    } finally {
+      setLoadingRecommendations(false);
+    }
   };
 
   // Don't show anything if user has no preferences
@@ -102,6 +152,16 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
             Based on your preferences: {userPreferences.join(', ')}
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={refreshRecommendations}
+          disabled={loadingRecommendations}
+          className="flex items-center gap-2 hover:bg-primary/5"
+        >
+          <RefreshCw className={`h-4 w-4 ${loadingRecommendations ? 'animate-spin' : ''}`} />
+          {loadingRecommendations ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       {loadingRecommendations ? (
@@ -110,18 +170,14 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
           <span>Loading recommendations...</span>
         </div>
       ) : recommendations.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {recommendations.slice(0, 8).map((shoe, index) => (
-            <ShoeCard
-              key={index}
-              shoe={shoe}
-              index={index}
-              isFavorite={isInFavorites(shoe.title)}
-              onFavoriteClick={onFavoriteClick}
-              onCardClick={handleViewClick}
-            />
-          ))}
-        </div>
+        <DynamicCarousel
+          items={recommendations}
+          itemsPerPage={4}
+          onFavoriteClick={onFavoriteClick}
+          isInFavorites={isInFavorites}
+          onCardClick={handleViewClick}
+          className="recommendations-carousel"
+        />
       ) : (
         <div className="text-center py-12">
           <p className="text-muted-foreground">
