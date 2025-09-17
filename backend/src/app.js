@@ -308,5 +308,63 @@ protectedRouter.get('/auth-check', (req, res) => {
   });
 });
 
+  // Recommendation endpoint: suggest shoes based on user's favorite brands
+  protectedRouter.get('/recommendations', async (req, res) => {
+    try {
+      // Get user's favorites
+      const favorites = await getUserFavorites(req.auth0Id);
+      if (!favorites || favorites.length === 0) {
+        return res.status(200).json({ recommendations: [], message: 'No favorites found for user.' });
+      }
+
+      // Extract brands from favorites
+      const brandCounts = {};
+      favorites.forEach(fav => {
+        if (fav.brand) {
+          brandCounts[fav.brand] = (brandCounts[fav.brand] || 0) + 1;
+        }
+      });
+      // Sort brands by frequency
+      const sortedBrands = Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a]);
+      if (sortedBrands.length === 0) {
+        return res.status(200).json({ recommendations: [], message: 'No brand preferences found.' });
+      }
+
+      // Fetch recommended shoes for top brands (limit to top 2 brands)
+      const recommended = [];
+      for (const brand of sortedBrands.slice(0, 2)) {
+        // Use the /shoes/:query endpoint logic to fetch shoes for the brand
+        const retailOptions = {
+          method: 'GET',
+          url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(brand)}`,
+          headers: {
+            'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
+            'X-RapidAPI-Host': process.env.STOCKX_API_HOST
+          }
+        };
+        try {
+          const retailRes = await retryRequest(retailOptions);
+          if (retailRes.data?.hits) {
+            // Take top 3 shoes for each brand
+            const shoes = retailRes.data.hits.slice(0, 3).map(shoe => ({
+              title: shoe.title,
+              retail_price: shoe.retail_price || 'N/A',
+              description: shoe.description || '',
+              sku: shoe.sku || '',
+              image_url: shoe.image || '',
+              brand: brand
+            }));
+            recommended.push(...shoes);
+          }
+        } catch (err) {
+          logger.error(`Failed to fetch recommendations for brand ${brand}: ${err.message}`);
+        }
+      }
+      res.status(200).json({ recommendations: recommended });
+    } catch (err) {
+      logger.error('Error generating recommendations', err);
+      res.status(500).json({ error: 'Internal Server Error', details: err.message });
+    }
+  });
 // Export our app so we can access it in server.js
 module.exports = app;
