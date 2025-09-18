@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useUserPreferences } from "@/context/UserPreferencesProvider";
 import { Button } from "@/components/ui/button";
-import { Heart, Loader2, Settings, RefreshCw } from "lucide-react";
+import { Heart, Loader, Settings, RefreshCw } from "lucide-react";
 import { ShoeCard } from "@/components/ShoeCard";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -223,9 +223,8 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
       </div>
 
       {loadingRecommendations ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mr-2" />
-          <span>Loading recommendations...</span>
+        <div className="flex items-center justify-center h-64">
+          <Loader className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : recommendations.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

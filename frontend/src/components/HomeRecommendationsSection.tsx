@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useUserPreferences } from "@/context/UserPreferencesProvider";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader, RefreshCw } from "lucide-react";
 import { DynamicCarousel } from "@/components/DynamicCarousel";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -151,9 +151,8 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       </div>
 
       {loadingRecommendations ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mr-2" />
-          <span>Loading recommendations...</span>
+        <div className="flex items-center justify-center h-64">
+          <Loader className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : recommendations.length > 0 ? (
         <DynamicCarousel
