@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 const menCategories = {
   sneakers: [
-    "adidas",
+    "Adidas",
     "Air Jordan",
     "ASICS",
     "Mihara Yasuhiro",
@@ -58,7 +58,7 @@ const menCategories = {
 
 const womenCategories = {
   sneakers: [
-    "adidas",
+    "Adidas",
     "Air Jordan",
     "ASICS",
     "New Balance",
@@ -94,7 +94,7 @@ const womenCategories = {
 
 const kidsCategories = {
   sneakers: [
-    "adidas",
+    "Adidas",
     "Air Jordan",
     "Nike",
   ],

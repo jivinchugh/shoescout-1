@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import ShoeDetail from "./pages/ShoeDetail";
 import { ThemeProvider } from "./context/ThemeProvider";
 import { ShoeResultsProvider } from "./context/ShoeResultsProvider";
+import { UserPreferencesProvider } from "./context/UserPreferencesProvider";
 import Favorites from "./pages/Favorites";
 import Dashboard from "./pages/Dashboard";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -33,21 +34,22 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <ShoeResultsProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-          <ScrollToTop />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              
-              {/* Protected Routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
+      <UserPreferencesProvider>
+        <ShoeResultsProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+            <ScrollToTop />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                
+                {/* Protected Routes */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
               
               <Route path="/favorites" element={
                 <ProtectedRoute>
@@ -67,8 +69,9 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </ShoeResultsProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+    </UserPreferencesProvider>
+  </ThemeProvider>
+</QueryClientProvider>
 );
 
 export default App;

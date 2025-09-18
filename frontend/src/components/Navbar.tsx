@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import LoginButton from "./auth/LoginButton";
 import LogoutButton from "./auth/LogoutButton";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useUserPreferences } from "@/context/UserPreferencesProvider";
 import logo from "@/components/brandLogos/_ACD37098-D53D-40DB-AEA0-52F68AB4128D_-removebg-preview.png";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -29,6 +30,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import BrandSelector from "./homepage/BrandSelector";
+import { useCallback } from "react";
 
 const getInitials = (name: string): string => {
   return name
@@ -48,9 +51,16 @@ export function Navbar() {
   // Add a temporary state for the dialog input
   const [tempShoeSize, setTempShoeSize] = useState<string>("");
 
+  // Add state for recommendations modal
+  const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, getAccessTokenSilently, user, logout } = useAuth0();
+  const { hasPreferences, setUserPreferences } = useUserPreferences();
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
@@ -96,6 +106,13 @@ export function Navbar() {
     }
   }, [showSizeDialog, shoeSize]);
 
+  // Close dropdown when modal closes
+  useEffect(() => {
+    if (!showRecommendationsModal) {
+      setDropdownOpen(false);
+    }
+  }, [showRecommendationsModal]);
+
   // Update the actual shoeSize only when Save is clicked
   const handleSaveShoeSize = async () => {
     // Use tempShoeSize instead of shoeSize
@@ -138,6 +155,62 @@ export function Navbar() {
       console.error("Error updating shoe size:", error);
     } finally {
       setIsUpdatingSize(false);
+    }
+  };
+
+  // Handle brand selection for recommendations
+  const handleBrandSelect = useCallback((brands: string[]) => {
+    setSelectedBrands(brands);
+  }, []);
+
+  // Fetch current user preferences when modal opens
+  const fetchCurrentPreferences = useCallback(async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch('http://localhost:8080/api/user-preferences', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedBrands(data.preferences || []);
+      }
+    } catch (error) {
+      console.error('Error fetching current preferences:', error);
+    }
+  }, [getAccessTokenSilently]);
+
+  // Save user preferences and close modal
+  const handleSavePreferences = async () => {
+    if (selectedBrands.length === 0) return;
+    
+    setLoadingRecommendations(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch('http://localhost:8080/api/user-preferences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ preferences: selectedBrands }),
+      });
+
+      if (response.ok) {
+        // Update the context with new preferences
+        setUserPreferences(selectedBrands);
+        setShowRecommendationsModal(false);
+        setDropdownOpen(false); // Ensure dropdown is closed
+        // Don't reset selectedBrands here so they persist for next time
+        // Trigger a custom event to notify other components
+        window.dispatchEvent(new CustomEvent('preferencesUpdated'));
+      }
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+    } finally {
+      setLoadingRecommendations(false);
     }
   };
 
@@ -330,13 +403,39 @@ export function Navbar() {
                 </Link>
               )}
 
+              {/* Recommendations button - only visible when authenticated and has preferences */}
+              {isAuthenticated && hasPreferences && (
+                <button
+                  onClick={() => {
+                    // Navigate to home if not already there, then scroll to recommendations
+                    if (location.pathname !== '/') {
+                      navigate('/');
+                      setTimeout(() => {
+                        const recommendationSection = document.querySelector('.home-recommendations-section');
+                        if (recommendationSection) {
+                          recommendationSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }, 100);
+                    } else {
+                      const recommendationSection = document.querySelector('.home-recommendations-section');
+                      if (recommendationSection) {
+                        recommendationSection.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }
+                  }}
+                  className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary flex items-center gap-1"
+                >
+                  <Settings className="h-4 w-4" /> Recommendations
+                </button>
+              )}
+
               {!isAuthenticated && <LoginButton />}
               
               {/* Only show ThemeToggle when not authenticated */}
               {!isAuthenticated && <ThemeToggle />}
               
               {isAuthenticated && (
-                <DropdownMenu>
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
@@ -446,9 +545,17 @@ export function Navbar() {
                       </DialogContent>
                     </Dialog>
                     
-                    <DropdownMenuItem className="cursor-pointer">
+                    <DropdownMenuItem 
+                      className="cursor-pointer" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setDropdownOpen(false); // Close dropdown
+                        fetchCurrentPreferences(); // Load current preferences
+                        setShowRecommendationsModal(true);
+                      }}
+                    >
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Account preferences</span>
+                      <span>Recommendations</span>
                     </DropdownMenuItem>
                     
                     <DropdownMenuItem
@@ -465,6 +572,38 @@ export function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+
+              {/* Recommendations Modal */}
+              <Dialog open={showRecommendationsModal} onOpenChange={setShowRecommendationsModal}>
+                <DialogContent className="w-[95vw] max-w-[425px] sm:w-full">
+                  <DialogHeader>
+                    <DialogTitle>Set Your Brand Preferences</DialogTitle>
+                    <DialogDescription>
+                      Select up to 3 brands you're interested in to get personalized recommendations.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <BrandSelector 
+                    onSelect={handleBrandSelect} 
+                    initialSelected={selectedBrands}
+                  />
+                  <DialogFooter>
+                    <Button 
+                      onClick={handleSavePreferences} 
+                      disabled={selectedBrands.length === 0 || loadingRecommendations}
+                      className="w-full"
+                    >
+                      {loadingRecommendations ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Preferences"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </nav>
 
             {/* Mobile menu toggle */}
@@ -560,6 +699,33 @@ export function Navbar() {
                 >
                   <Heart className="h-5 w-5" /> Favorites
                 </Link>
+              )}
+
+              {/* Add Recommendations link to mobile menu - only when has preferences */}
+              {isAuthenticated && hasPreferences && (
+                <button
+                  className="text-xl font-medium text-foreground transition-colors hover:text-primary flex items-center gap-2 text-left"
+                  onClick={() => {
+                    toggleMobileMenu();
+                    // Navigate to home if not already there, then scroll to recommendations
+                    if (location.pathname !== '/') {
+                      navigate('/');
+                      setTimeout(() => {
+                        const recommendationSection = document.querySelector('.home-recommendations-section');
+                        if (recommendationSection) {
+                          recommendationSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }, 100);
+                    } else {
+                      const recommendationSection = document.querySelector('.home-recommendations-section');
+                      if (recommendationSection) {
+                        recommendationSection.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }
+                  }}
+                >
+                  <Settings className="h-5 w-5" /> Recommendations
+                </button>
               )}
 
               {!isAuthenticated ? <LoginButton /> : <LogoutButton />}

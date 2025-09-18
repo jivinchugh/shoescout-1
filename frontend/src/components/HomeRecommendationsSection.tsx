@@ -1,0 +1,172 @@
+import { useState, useEffect } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useUserPreferences } from "@/context/UserPreferencesProvider";
+import { Loader2, RefreshCw } from "lucide-react";
+import { DynamicCarousel } from "@/components/DynamicCarousel";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+
+interface HomeRecommendationsSectionProps {
+  favorites: any[];
+  onFavoriteClick: (shoe: any) => void;
+  isInFavorites: (shoeTitle: string) => boolean;
+}
+
+const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
+  favorites,
+  onFavoriteClick,
+  isInFavorites
+}) => {
+  const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
+  const { userPreferences, fetchUserPreferences } = useUserPreferences();
+  
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
+  // Fisher-Yates shuffle algorithm for better randomization
+  const shuffleArray = (array: any[]) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  useEffect(() => {
+    fetchUserPreferences();
+  }, []);
+
+  useEffect(() => {
+    if (userPreferences.length > 0) {
+      fetchRecommendations();
+    }
+  }, [userPreferences]);
+
+  // Listen for preferences updates from navbar
+  useEffect(() => {
+    const handlePreferencesUpdate = () => {
+      fetchUserPreferences();
+    };
+
+    window.addEventListener('preferencesUpdated', handlePreferencesUpdate);
+    return () => {
+      window.removeEventListener('preferencesUpdated', handlePreferencesUpdate);
+    };
+  }, []);
+
+  const fetchRecommendations = async () => {
+    setLoadingRecommendations(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch('http://localhost:8080/api/recommendations', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const allRecs = data.recommendations || [];
+        
+        // Shuffle the recommendations only once on initial load to avoid image changing
+        const shuffledRecs = shuffleArray(allRecs);
+        setRecommendations(shuffledRecs);
+        
+        console.log(`Fetched and shuffled ${shuffledRecs.length} recommendations`);
+      }
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+
+  const handleViewClick = (shoe: any) => {
+    const shoeId = shoe.id || encodeURIComponent(shoe.title.toLowerCase().replace(/\s+/g, '-'));
+    navigate(`/shoe/${shoeId}`, { state: { shoe } });
+  };
+
+  // Function to manually refresh recommendations by fetching new data from API
+  const refreshRecommendations = async () => {
+    setLoadingRecommendations(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch('http://localhost:8080/api/recommendations', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const allRecs = data.recommendations || [];
+        
+        // Shuffle the new recommendations to provide fresh content
+        const shuffledRecs = shuffleArray(allRecs);
+        setRecommendations(shuffledRecs);
+        
+        console.log(`Refreshed with ${shuffledRecs.length} new recommendations`);
+      } else {
+        console.error('Failed to refresh recommendations');
+      }
+    } catch (error) {
+      console.error('Error refreshing recommendations:', error);
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+
+  // Don't show anything if user has no preferences
+  if (userPreferences.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-12 home-recommendations-section">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-3xl font-bold">Recommended For You</h2>
+          <p className="text-muted-foreground mt-1">
+            Based on your preferences: {userPreferences.join(', ')}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={refreshRecommendations}
+          disabled={loadingRecommendations}
+          className="flex items-center gap-2 hover:bg-primary/5"
+        >
+          <RefreshCw className={`h-4 w-4 ${loadingRecommendations ? 'animate-spin' : ''}`} />
+          {loadingRecommendations ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
+
+      {loadingRecommendations ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin mr-2" />
+          <span>Loading recommendations...</span>
+        </div>
+      ) : recommendations.length > 0 ? (
+        <DynamicCarousel
+          items={recommendations}
+          itemsPerPage={4}
+          onFavoriteClick={onFavoriteClick}
+          isInFavorites={isInFavorites}
+          onCardClick={handleViewClick}
+          className="recommendations-carousel"
+        />
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">
+            No recommendations available at the moment. Try updating your preferences.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default HomeRecommendationsSection;
