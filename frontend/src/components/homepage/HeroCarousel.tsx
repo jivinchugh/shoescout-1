@@ -69,9 +69,9 @@ export function HeroCarousel({ promos }: HeroCarouselProps) {
                       {promo.subtitle}
                     </p>
                   )}
-                  <Button className="mt-4 bg-white text-black hover:bg-white/90">
+                  {/* <Button className="mt-4 bg-white text-black hover:bg-white/90">
                     {promo.ctaText}
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
             </CarouselItem>
