@@ -403,32 +403,6 @@ export function Navbar() {
                 </Link>
               )}
 
-              {/* Recommendations button - only visible when authenticated and has preferences */}
-              {isAuthenticated && hasPreferences && (
-                <button
-                  onClick={() => {
-                    // Navigate to home if not already there, then scroll to recommendations
-                    if (location.pathname !== '/') {
-                      navigate('/');
-                      setTimeout(() => {
-                        const recommendationSection = document.querySelector('.home-recommendations-section');
-                        if (recommendationSection) {
-                          recommendationSection.scrollIntoView({ behavior: 'smooth' });
-                        }
-                      }, 100);
-                    } else {
-                      const recommendationSection = document.querySelector('.home-recommendations-section');
-                      if (recommendationSection) {
-                        recommendationSection.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }
-                  }}
-                  className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary flex items-center gap-1"
-                >
-                  <Settings className="h-4 w-4" /> Recommendations
-                </button>
-              )}
-
               {!isAuthenticated && <LoginButton />}
               
               {/* Only show ThemeToggle when not authenticated */}

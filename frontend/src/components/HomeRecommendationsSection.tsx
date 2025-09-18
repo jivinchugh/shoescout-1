@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useUserPreferences } from "@/context/UserPreferencesProvider";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader, RefreshCw } from "lucide-react";
 import { DynamicCarousel } from "@/components/DynamicCarousel";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +23,8 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
   
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const hasFetchedInitial = useRef(false);
+  const isFetchingRef = useRef(false);
 
   // Fisher-Yates shuffle algorithm for better randomization
   const shuffleArray = (array: any[]) => {
@@ -34,12 +36,10 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
     return shuffled;
   };
 
+  // Only fetch recommendations once after preferences are available
   useEffect(() => {
-    fetchUserPreferences();
-  }, []);
-
-  useEffect(() => {
-    if (userPreferences.length > 0) {
+    if (!hasFetchedInitial.current && userPreferences.length > 0) {
+      hasFetchedInitial.current = true;
       fetchRecommendations();
     }
   }, [userPreferences]);
@@ -57,6 +57,8 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
   }, []);
 
   const fetchRecommendations = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
@@ -80,6 +82,7 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       console.error('Error fetching recommendations:', error);
     } finally {
       setLoadingRecommendations(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -90,6 +93,8 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
 
   // Function to manually refresh recommendations by fetching new data from API
   const refreshRecommendations = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
@@ -115,6 +120,7 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       console.error('Error refreshing recommendations:', error);
     } finally {
       setLoadingRecommendations(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -145,9 +151,8 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       </div>
 
       {loadingRecommendations ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mr-2" />
-          <span>Loading recommendations...</span>
+        <div className="flex items-center justify-center h-64">
+          <Loader className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : recommendations.length > 0 ? (
         <DynamicCarousel
