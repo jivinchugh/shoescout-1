@@ -11,6 +11,7 @@ import {
   NavigationMenuContent,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
+import { SizeIcon } from "@radix-ui/react-icons";
 
 const menBrands = [
   {
@@ -49,12 +50,12 @@ const womenBrands = [
     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/UGG_logo.svg/2560px-UGG_logo.svg.png",
   },
   {
-    name: "Skechers",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/SKECHERS_logo.png/1200px-SKECHERS_logo.png",
-  },
-  {
     name: "Asics",
     logo: "https://cdn.freebiesupply.com/logos/large/2x/asics-6-logo-black-and-white.png",
+  },
+  {
+    name: "Skechers",
+    logo: "https://34thstreet.org/images/cache/assets/uploads/images/logos/Skechers-logo-700x290.png",  
   },
   {
     name: "Nike",
