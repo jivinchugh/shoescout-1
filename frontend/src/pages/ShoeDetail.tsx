@@ -13,6 +13,7 @@ interface ShoeData {
   image_url: string;
   user_size?: number;
   sku?: string;
+  brand?: string;
   resell_links?: {
     stockX?: string;
     goat?: string;
@@ -25,6 +26,13 @@ interface ShoeData {
     flightClub?: number;
     stadiumGoods?: number;
   };
+  size_specific_prices?: {
+    stockX?: Array<{ size: string; price: number }>;
+    goat?: Array<{ size: string; price: number }>;
+    flightClub?: Array<{ size: string; price: number }>;
+    stadiumGoods?: Array<{ size: string; price: number }>;
+  };
+  available_sizes?: string[];
 }
 
 const ShoeDetail = () => {
@@ -39,6 +47,15 @@ const ShoeDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<ShoeData[]>([]);
   const [favoriteActionLoading, setFavoriteActionLoading] = useState(false);
+  
+  // Size selection state
+  const [selectedSize, setSelectedSize] = useState<string>('');
+  const [currentPrices, setCurrentPrices] = useState<{
+    stockX?: number;
+    goat?: number;
+    flightClub?: number;
+    stadiumGoods?: number;
+  }>({});
   
   useEffect(() => {
     // If shoe data wasn't passed in navigation state, fetch it
@@ -127,6 +144,54 @@ const ShoeDetail = () => {
 
     const savings = ((retailPrice - marketPrice) / retailPrice) * 100;
     return savings <= 0 ? "0%" : `${Math.round(savings)}%`;
+  };
+
+  // Size selection helper functions
+  const handleSizeSelection = (size: string) => {
+    // If clicking the same size, deselect it
+    if (selectedSize === size) {
+      setSelectedSize('');
+      setCurrentPrices({});
+    } else {
+      setSelectedSize(size);
+      updatePricesForSize(size);
+    }
+  };
+
+  const updatePricesForSize = (size: string) => {
+    if (!shoe?.size_specific_prices) return;
+    
+    const newPrices: any = {};
+    
+    // Find price for selected size from each platform
+    Object.keys(shoe.size_specific_prices).forEach(platform => {
+      const platformPrices = shoe.size_specific_prices![platform as keyof typeof shoe.size_specific_prices];
+      if (platformPrices) {
+        const sizeData = platformPrices.find(p => p.size === size);
+        if (sizeData) {
+          newPrices[platform] = sizeData.price;
+        }
+      }
+    });
+    
+    setCurrentPrices(newPrices);
+  };
+
+  const getPriceForSize = (size: string): number | null => {
+    if (!shoe?.size_specific_prices) return null;
+    
+    // Return the lowest price for this size across all platforms
+    const prices: number[] = [];
+    Object.values(shoe.size_specific_prices).forEach(platformPrices => {
+      if (platformPrices) {
+        const sizeData = platformPrices.find(p => p.size === size);
+        if (sizeData && sizeData.price) {
+          prices.push(sizeData.price);
+        }
+      }
+    });
+    
+    return prices.length > 0 ? Math.min(...prices) : null;
   };
   
   // Toggle favorite status
@@ -266,45 +331,111 @@ const ShoeDetail = () => {
               </div>
             </div>
 
+            {/* Size Selection Section - StockX Style */}
+            {shoe.available_sizes && shoe.available_sizes.length > 0 && (
+              <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold mb-2">Size:</h2>
+                  <p className="text-sm text-gray-600 mb-2">Size and Conversions</p>
+                  <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-4">
+                    <span><strong>Y:</strong> Youth</span>
+                    <span><strong>C:</strong> Child</span>
+                    <span><strong>W:</strong> Women's</span>
+                    <span><strong>M:</strong> Men's</span>
+                  </div>
+                </div>
+                
+                {/* Size Dropdown - StockX Style */}
+                <div className="relative">
+                  <select
+                    value={selectedSize}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '') {
+                        setSelectedSize('');
+                        setCurrentPrices({});
+                      } else {
+                        handleSizeSelection(value);
+                      }
+                    }}
+                    className="w-full p-4 pr-10 bg-white border-2 border-gray-300 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-gray-400 hover:border-gray-400 transition-colors duration-200 appearance-none cursor-pointer"
+                  >
+                    <option value="">Select a size to see specific prices</option>
+                    {shoe.available_sizes.map(size => {
+                      const price = getPriceForSize(size);
+                      return (
+                        <option key={size} value={size}>
+                          US {size}{!size.includes('Y') && !size.includes('C') && !size.includes('W') && 'M'} 
+                          {price ? ` - $${price.toFixed(0)}` : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  
+                  {/* Custom dropdown arrow */}
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                
+                {/* Size selection info */}
+                {selectedSize && (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      ✓ Size {selectedSize} selected - Prices updated below. Select "Select a size..." to deselect.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Resell Prices Section */}
             {shoe.lowest_resell_prices && Object.values(shoe.lowest_resell_prices).some(price => price) && (
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h2 className="text-lg font-semibold mb-2">Resell Prices</h2>
+                <h2 className="text-lg font-semibold mb-2">
+                  {selectedSize ? `Resell Prices for Size ${selectedSize}` : 'Resell Prices'}
+                </h2>
                 <div className="grid grid-cols-2 gap-4">
-                  {shoe.lowest_resell_prices.stockX && (
-                    <div>
-                      <p className="text-sm text-gray-500">StockX</p>
-                      <p className="text-xl font-bold">{formatPrice(shoe.lowest_resell_prices.stockX)}</p>
-                    </div>
-                  )}
-                  {shoe.lowest_resell_prices.goat && (
-                    <div>
-                      <p className="text-sm text-gray-500">GOAT</p>
-                      <p className="text-xl font-bold">{formatPrice(shoe.lowest_resell_prices.goat)}</p>
-                    </div>
-                  )}
-                  {shoe.lowest_resell_prices.flightClub && (
-                    <div>
-                      <p className="text-sm text-gray-500">Flight Club</p>
-                      <p className="text-xl font-bold">{formatPrice(shoe.lowest_resell_prices.flightClub)}</p>
-                    </div>
-                  )}
-                  {shoe.lowest_resell_prices.stadiumGoods && (
-                    <div>
-                      <p className="text-sm text-gray-500">Stadium Goods</p>
-                      <p className="text-xl font-bold">{formatPrice(shoe.lowest_resell_prices.stadiumGoods)}</p>
-                    </div>
-                  )}
+                  {/* Show selected size prices if available, otherwise show lowest prices */}
+                  {(() => {
+                    const pricesToShow = selectedSize && Object.keys(currentPrices).length > 0 
+                      ? currentPrices 
+                      : shoe.lowest_resell_prices;
+                    
+                    return (
+                      <>
+                        {pricesToShow?.stockX && (
+                          <div>
+                            <p className="text-sm text-gray-500">StockX</p>
+                            <p className="text-xl font-bold">{formatPrice(pricesToShow.stockX)}</p>
+                          </div>
+                        )}
+                        {pricesToShow?.goat && (
+                          <div>
+                            <p className="text-sm text-gray-500">GOAT</p>
+                            <p className="text-xl font-bold">{formatPrice(pricesToShow.goat)}</p>
+                          </div>
+                        )}
+                        {pricesToShow?.flightClub && (
+                          <div>
+                            <p className="text-sm text-gray-500">Flight Club</p>
+                            <p className="text-xl font-bold">{formatPrice(pricesToShow.flightClub)}</p>
+                          </div>
+                        )}
+                        {pricesToShow?.stadiumGoods && (
+                          <div>
+                            <p className="text-sm text-gray-500">Stadium Goods</p>
+                            <p className="text-xl font-bold">{formatPrice(pricesToShow.stadiumGoods)}</p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
-              
-              {calculateSavings(shoe.retail_price, shoe.market_price) !== "0%" &&
-                calculateSavings(shoe.retail_price, shoe.market_price) !== "N/A" && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-md mb-6">
-                    You save {calculateSavings(shoe.retail_price, shoe.market_price)} off retail price!
-                  </div>
-                )}
               
             <div className="flex flex-col space-y-3">
               {shoe.resell_links?.stockX && (

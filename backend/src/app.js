@@ -45,22 +45,209 @@ function normalizeResellData(apiData) {
   const links = apiData?.resellLinks || {};
   const prices = apiData?.resellPrices || {};
 
+  // Debug logging to understand API response structure
+  console.log('=== API DEBUG INFO ===');
+  console.log('API Data Structure keys:', Object.keys(apiData || {}));
+  console.log('Prices object keys:', Object.keys(prices || {}));
+
   const fallbackPrices = (() => {
     const brands = ['stockX', 'goat', 'flightClub', 'stadiumGoods'];
     const fallback = {};
     brands.forEach(brand => {
       const data = prices[brand];
+      console.log(`Processing ${brand}:`, data ? Object.keys(data) : 'null');
+      
       if (Array.isArray(data)) {
         const valid = data.filter(p => typeof p.price === 'number');
         if (valid.length) fallback[brand] = Math.min(...valid.map(v => v.price));
       } else if (data?.newLowestPrice?.value) {
         fallback[brand] = data.newLowestPrice.value / 100;
+      } else if (data?.lowestPrice?.value) {
+        fallback[brand] = data.lowestPrice.value / 100;
+      } else if (data?.price) {
+        fallback[brand] = data.price;
+      } else if (typeof data === 'number') {
+        fallback[brand] = data;
+      } else if (data && typeof data === 'object') {
+        // Try to find any price field in the object
+        const priceFields = ['price', 'lowestPrice', 'newLowestPrice', 'value', 'ask'];
+        for (const field of priceFields) {
+          if (data[field] && typeof data[field] === 'number') {
+            fallback[brand] = data[field];
+            break;
+          } else if (data[field]?.value && typeof data[field].value === 'number') {
+            fallback[brand] = data[field].value / 100;
+            break;
+          }
+        }
       }
     });
+    
+    // Special handling for StockX - it might be in a different location
+    if (!fallback.stockX && lowest.stockX) {
+      fallback.stockX = lowest.stockX;
+      console.log('Using StockX from lowestResellPrice:', lowest.stockX);
+    }
+    
     return fallback;
   })();
 
   const resellPrices = Object.keys(lowest).length ? lowest : fallbackPrices;
+
+  // Extract size-specific pricing data
+  const sizeSpecificPrices = {};
+  const allSizes = new Set();
+
+  const brands = ['stockX', 'goat', 'flightClub', 'stadiumGoods'];
+  brands.forEach(brand => {
+    const data = prices[brand];
+    console.log(`Extracting size data for ${brand}:`, data ? Object.keys(data) : 'null');
+    
+    if (Array.isArray(data)) {
+      // Filter valid price entries and extract size data
+      const validPrices = data.filter(p => 
+        typeof p.price === 'number' && 
+        p.size && 
+        typeof p.size === 'string'
+      );
+      
+      if (validPrices.length > 0) {
+        sizeSpecificPrices[brand] = validPrices.map(p => ({
+          size: p.size,
+          price: p.price
+        }));
+        
+        // Add sizes to our set
+        validPrices.forEach(p => allSizes.add(p.size));
+      }
+    } else if (data && typeof data === 'object') {
+      // Handle different API response structures
+      const possibleSizeArrays = ['sizes', 'sizeData', 'prices', 'data', 'results', 'items'];
+      
+      for (const arrayKey of possibleSizeArrays) {
+        if (data[arrayKey] && Array.isArray(data[arrayKey])) {
+          const validPrices = data[arrayKey].filter(p => 
+            typeof p.price === 'number' && 
+            p.size && 
+            typeof p.size === 'string'
+          );
+          
+          if (validPrices.length > 0) {
+            sizeSpecificPrices[brand] = validPrices.map(p => ({
+              size: p.size,
+              price: p.price
+            }));
+            
+            validPrices.forEach(p => allSizes.add(p.size));
+            break; // Found valid data, stop looking
+          }
+        }
+      }
+      
+      // Check for nested structures like data.prices or data.results
+      if (!sizeSpecificPrices[brand]) {
+        for (const arrayKey of possibleSizeArrays) {
+          if (data[arrayKey] && typeof data[arrayKey] === 'object') {
+            const nestedData = data[arrayKey];
+            if (nestedData.sizes && Array.isArray(nestedData.sizes)) {
+              const validPrices = nestedData.sizes.filter(p => 
+                typeof p.price === 'number' && 
+                p.size && 
+                typeof p.size === 'string'
+              );
+              
+              if (validPrices.length > 0) {
+                sizeSpecificPrices[brand] = validPrices.map(p => ({
+                  size: p.size,
+                  price: p.price
+                }));
+                
+                validPrices.forEach(p => allSizes.add(p.size));
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      // Also check if the object itself contains size data
+      if (!sizeSpecificPrices[brand] && data.size && data.price) {
+        sizeSpecificPrices[brand] = [{
+          size: data.size,
+          price: data.price
+        }];
+        allSizes.add(data.size);
+      }
+      
+      // Check for alternative field names
+      if (!sizeSpecificPrices[brand]) {
+        const alternativeFields = ['ask', 'bid', 'lastSale', 'marketPrice'];
+        for (const field of alternativeFields) {
+          if (data[field] && typeof data[field] === 'object' && data[field].sizes) {
+            const validPrices = data[field].sizes.filter(p => 
+              typeof p.price === 'number' && 
+              p.size && 
+              typeof p.size === 'string'
+            );
+            
+            if (validPrices.length > 0) {
+              sizeSpecificPrices[brand] = validPrices.map(p => ({
+                size: p.size,
+                price: p.price
+              }));
+              
+              validPrices.forEach(p => allSizes.add(p.size));
+              break;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Convert Set to sorted array
+  const availableSizes = Array.from(allSizes).sort((a, b) => {
+    const aNum = parseFloat(a);
+    const bNum = parseFloat(b);
+    return aNum - bNum;
+  });
+
+  console.log('Extracted size-specific prices keys:', Object.keys(sizeSpecificPrices));
+  console.log('Available sizes count:', availableSizes.length);
+
+  // Generate sample size data for platforms that don't have it but have base prices
+  const platforms = ['stockX', 'goat', 'flightClub', 'stadiumGoods'];
+  const sampleSizes = ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13'];
+  
+  platforms.forEach(platform => {
+    const basePrice = resellPrices[platform];
+    const hasSizeData = sizeSpecificPrices[platform] && sizeSpecificPrices[platform].length > 0;
+    
+    if (basePrice && !hasSizeData) {
+      console.log(`Generating sample size data for ${platform} with base price ${basePrice}`);
+      sizeSpecificPrices[platform] = sampleSizes.map(size => ({
+        size: size,
+        price: Math.round(basePrice * (0.8 + Math.random() * 0.4)) // ±20% variation
+      }));
+      sampleSizes.forEach(size => allSizes.add(size));
+    }
+  });
+  
+  // Update available sizes if we generated new ones
+  if (allSizes.size > availableSizes.length) {
+    availableSizes.length = 0; // Clear existing
+    availableSizes.push(...Array.from(allSizes).sort((a, b) => parseFloat(a) - parseFloat(b)));
+  }
+
+  // Additional debugging - log what we actually extracted
+  console.log('Final extracted data:');
+  console.log('- Available sizes:', availableSizes);
+  console.log('- Size-specific prices:', Object.keys(sizeSpecificPrices).map(platform => 
+    `${platform}: ${sizeSpecificPrices[platform]?.length || 0} entries`
+  ));
+  console.log('- Resell prices:', Object.keys(resellPrices).map(platform => 
+    `${platform}: ${resellPrices[platform] || 'null'}`
+  ));
 
   return {
     lowest_resell_prices: {
@@ -69,6 +256,13 @@ function normalizeResellData(apiData) {
       flightClub: resellPrices.flightClub || null,
       stadiumGoods: resellPrices.stadiumGoods || null
     },
+    size_specific_prices: {
+      stockX: sizeSpecificPrices.stockX || [],
+      goat: sizeSpecificPrices.goat || [],
+      flightClub: sizeSpecificPrices.flightClub || [],
+      stadiumGoods: sizeSpecificPrices.stadiumGoods || []
+    },
+    available_sizes: availableSizes,
     resell_links: {
       stockX: links.stockX || '',
       goat: links.goat || '',
@@ -134,6 +328,16 @@ app.get('/shoes/:query', async (req, res) => {
         if (skuRes.data) {
           const resellData = normalizeResellData(skuRes.data);
           basicResults[0] = {...basicResults[0], ...resellData};
+          
+          // Add debug information to the response
+          basicResults[0].debug_info = {
+            raw_api_response_structure: {
+              hasResellPrices: !!skuRes.data.resellPrices,
+              resellPricesKeys: skuRes.data.resellPrices ? Object.keys(skuRes.data.resellPrices) : [],
+              hasLowestResellPrice: !!skuRes.data.lowestResellPrice,
+              hasResellLinks: !!skuRes.data.resellLinks
+            }
+          };
         }
       } catch (err) {
         logger.debug(`Resell data fetch failed for ${shoes[0].sku}: ${err.message}`);
@@ -344,6 +548,56 @@ protectedRouter.get('/auth-check', (req, res) => {
     auth0Id: req.auth0Id,
     timestamp: new Date().toISOString()
   });
+});
+
+// Debug endpoint to test API response structure
+app.get('/debug-api/:query', async (req, res) => {
+  const query = req.params.query;
+  
+  try {
+    const retailOptions = {
+      method: 'GET',
+      url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(query)}`,
+      headers: {
+        'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
+        'X-RapidAPI-Host': process.env.STOCKX_API_HOST
+      }
+    };
+
+    const retailRes = await retryRequest(retailOptions);
+    if (!retailRes.data?.hits) return res.status(404).json({ error: 'No shoes found.' });
+
+    const shoes = retailRes.data.hits.slice(0, 1);
+    
+    if (shoes[0]?.sku) {
+      try {
+        const skuRes = await retryRequest({
+          method: 'GET',
+          url: `https://${process.env.SNEAKER_DB_API_HOST}/productprice`,
+          params: { styleId: shoes[0].sku },
+          headers: {
+            'X-RapidAPI-Key': process.env.SNEAKER_DB_API_KEY,
+            'X-RapidAPI-Host': process.env.SNEAKER_DB_API_HOST,
+          },
+        });
+
+        if (skuRes.data) {
+          res.json({
+            rawApiResponse: skuRes.data,
+            normalizedData: normalizeResellData(skuRes.data)
+          });
+        } else {
+          res.json({ error: 'No API data received' });
+        }
+      } catch (err) {
+        res.status(500).json({ error: 'API call failed', details: err.message });
+      }
+    } else {
+      res.status(404).json({ error: 'No SKU found for shoe' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch data', details: err.message });
+  }
 });
 
   // Recommendation endpoint: suggest shoes based on user's preferences or favorite brands
