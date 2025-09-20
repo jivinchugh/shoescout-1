@@ -34,7 +34,7 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-preferences`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

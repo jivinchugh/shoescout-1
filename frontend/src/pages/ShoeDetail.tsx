@@ -56,7 +56,7 @@ const ShoeDetail = () => {
     setIsLoading(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch(`http://localhost:8080/shoes/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/shoes/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -82,7 +82,7 @@ const ShoeDetail = () => {
   const fetchFavorites = async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch("http://localhost:8080/api/favorites", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -141,7 +141,7 @@ const ShoeDetail = () => {
       if (isInFavorites()) {
         // Remove from favorites
         const encodedTitle = encodeURIComponent(shoe.title);
-        await fetch(`http://localhost:8080/api/favorites/${encodedTitle}`, {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/favorites/${encodedTitle}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -149,7 +149,7 @@ const ShoeDetail = () => {
         });
       } else {
         // Add to favorites
-        await fetch("http://localhost:8080/api/favorites", {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,

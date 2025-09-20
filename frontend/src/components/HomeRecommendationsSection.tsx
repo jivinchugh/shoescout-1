@@ -62,7 +62,7 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/recommendations', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recommendations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -98,7 +98,7 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/recommendations', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recommendations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

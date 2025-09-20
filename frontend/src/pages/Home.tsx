@@ -83,7 +83,7 @@ export default function Home() {
       const token = await getAccessTokenSilently();
       const formattedQuery = randomTerm.trim().replace(/\s+/g, "-");
 
-      const response = await fetch(`http://localhost:8080/shoes/${formattedQuery}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/shoes/${formattedQuery}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -115,7 +115,7 @@ export default function Home() {
   const fetchFavorites = async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch("http://localhost:8080/api/favorites", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -189,7 +189,7 @@ export default function Home() {
 
       if (isInFavorites(shoe.title)) {
         const encodedTitle = encodeURIComponent(shoe.title);
-        await fetch(`http://localhost:8080/api/favorites/${encodedTitle}`, {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/favorites/${encodedTitle}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -198,7 +198,7 @@ export default function Home() {
 
         setFavorites(favorites.filter(fav => fav.title !== shoe.title));
       } else {
-        await fetch("http://localhost:8080/api/favorites", {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,

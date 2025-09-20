@@ -49,7 +49,7 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
   const saveUserPreferences = async (brands: string[]) => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-preferences`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/recommendations', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recommendations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -99,7 +99,7 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/recommendations', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recommendations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
