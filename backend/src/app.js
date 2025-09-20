@@ -498,7 +498,7 @@ protectedRouter.post('/shoe-size', async (req, res) => {
   }
 });
 
-// Get user's brand preferences (protected route)
+// Get user's brand preferences (protected routes)
 protectedRouter.get('/user-preferences', async (req, res) => {
   try {
     const user = await getUser(req.auth0Id);
