@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Loader2, RefreshCw } from "lucide-react";
+import { useUserPreferences } from "@/context/UserPreferencesProvider";
+import { Loader, RefreshCw } from "lucide-react";
 import { DynamicCarousel } from "@/components/DynamicCarousel";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -18,10 +19,12 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
 }) => {
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
+  const { userPreferences, fetchUserPreferences } = useUserPreferences();
   
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
-  const [userPreferences, setUserPreferences] = useState<string[]>([]);
+  const hasFetchedInitial = useRef(false);
+  const isFetchingRef = useRef(false);
 
   // Fisher-Yates shuffle algorithm for better randomization
   const shuffleArray = (array: any[]) => {
@@ -33,12 +36,10 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
     return shuffled;
   };
 
+  // Only fetch recommendations once after preferences are available
   useEffect(() => {
-    fetchUserPreferences();
-  }, []);
-
-  useEffect(() => {
-    if (userPreferences.length > 0) {
+    if (!hasFetchedInitial.current && userPreferences.length > 0) {
+      hasFetchedInitial.current = true;
       fetchRecommendations();
     }
   }, [userPreferences]);
@@ -55,29 +56,13 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
     };
   }, []);
 
-  const fetchUserPreferences = async () => {
-    try {
-      const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserPreferences(data.preferences || []);
-      }
-    } catch (error) {
-      console.error('Error fetching user preferences:', error);
-    }
-  };
-
   const fetchRecommendations = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/recommendations', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recommendations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -97,6 +82,7 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       console.error('Error fetching recommendations:', error);
     } finally {
       setLoadingRecommendations(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -107,10 +93,12 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
 
   // Function to manually refresh recommendations by fetching new data from API
   const refreshRecommendations = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/recommendations', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recommendations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -132,6 +120,7 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       console.error('Error refreshing recommendations:', error);
     } finally {
       setLoadingRecommendations(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -162,9 +151,8 @@ const HomeRecommendationsSection: React.FC<HomeRecommendationsSectionProps> = ({
       </div>
 
       {loadingRecommendations ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mr-2" />
-          <span>Loading recommendations...</span>
+        <div className="flex items-center justify-center h-64">
+          <Loader className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : recommendations.length > 0 ? (
         <DynamicCarousel

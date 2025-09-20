@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useUserPreferences } from "@/context/UserPreferencesProvider";
 import { Button } from "@/components/ui/button";
-import { Heart, Loader2, Settings, RefreshCw } from "lucide-react";
+import { Heart, Loader, Settings, RefreshCw } from "lucide-react";
 import { ShoeCard } from "@/components/ShoeCard";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -28,45 +29,27 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
 }) => {
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
+  const { userPreferences, setUserPreferences, fetchUserPreferences } = useUserPreferences();
   
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [showPreferencesDialog, setShowPreferencesDialog] = useState(false);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [userPreferences, setUserPreferences] = useState<string[]>([]);
+  const hasFetchedInitial = useRef(false);
+  const isFetchingRef = useRef(false);
 
+  // Only fetch recommendations once after preferences are available
   useEffect(() => {
-    fetchUserPreferences();
-  }, []);
-
-  useEffect(() => {
-    if (userPreferences.length > 0) {
+    if (!hasFetchedInitial.current && userPreferences.length > 0) {
+      hasFetchedInitial.current = true;
       fetchRecommendations();
     }
   }, [userPreferences]);
 
-  const fetchUserPreferences = async () => {
-    try {
-      const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserPreferences(data.preferences || []);
-      }
-    } catch (error) {
-      console.error('Error fetching user preferences:', error);
-    }
-  };
-
   const saveUserPreferences = async (brands: string[]) => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-preferences`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +61,7 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
       if (response.ok) {
         setUserPreferences(brands);
         setShowPreferencesDialog(false);
-        fetchRecommendations();
+        // Do not auto-fetch recommendations here; user can refresh manually
       }
     } catch (error) {
       console.error('Error saving user preferences:', error);
@@ -86,10 +69,12 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
   };
 
   const fetchRecommendations = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/recommendations', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recommendations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -103,15 +88,18 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
       console.error('Error fetching recommendations:', error);
     } finally {
       setLoadingRecommendations(false);
+      isFetchingRef.current = false;
     }
   };
 
   // Function to manually refresh recommendations by fetching new data from API
   const refreshRecommendations = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/recommendations', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recommendations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -128,6 +116,7 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
       console.error('Error refreshing recommendations:', error);
     } finally {
       setLoadingRecommendations(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -234,9 +223,8 @@ const RecommendationSection: React.FC<RecommendationSectionProps> = ({
       </div>
 
       {loadingRecommendations ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin mr-2" />
-          <span>Loading recommendations...</span>
+        <div className="flex items-center justify-center h-64">
+          <Loader className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : recommendations.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

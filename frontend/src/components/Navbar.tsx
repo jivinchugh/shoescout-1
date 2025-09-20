@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import LoginButton from "./auth/LoginButton";
 import LogoutButton from "./auth/LogoutButton";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useUserPreferences } from "@/context/UserPreferencesProvider";
 import logo from "@/components/brandLogos/_ACD37098-D53D-40DB-AEA0-52F68AB4128D_-removebg-preview.png";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -59,6 +60,7 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, getAccessTokenSilently, user, logout } = useAuth0();
+  const { hasPreferences, setUserPreferences } = useUserPreferences();
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
@@ -78,7 +80,7 @@ export function Navbar() {
     try {
       const token = await getAccessTokenSilently();
       const response = await fetch(
-        `http://localhost:8080/api/shoe-size`,
+        `${import.meta.env.VITE_API_URL}/api/shoe-size`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -130,7 +132,7 @@ export function Navbar() {
       // API call with tempShoeSize
       const token = await getAccessTokenSilently();
       const response = await fetch(
-        `http://localhost:8080/api/shoe-size`,
+        `${import.meta.env.VITE_API_URL}/api/shoe-size`,
         {
           method: 'POST',
           headers: {
@@ -165,7 +167,7 @@ export function Navbar() {
   const fetchCurrentPreferences = useCallback(async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-preferences`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -187,7 +189,7 @@ export function Navbar() {
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-preferences`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -197,6 +199,8 @@ export function Navbar() {
       });
 
       if (response.ok) {
+        // Update the context with new preferences
+        setUserPreferences(selectedBrands);
         setShowRecommendationsModal(false);
         setDropdownOpen(false); // Ensure dropdown is closed
         // Don't reset selectedBrands here so they persist for next time
@@ -229,7 +233,7 @@ export function Navbar() {
     try {
       const token = await getAccessTokenSilently();
       const response = await fetch(
-        `http://localhost:8080/api/shoe-size`,
+        `${import.meta.env.VITE_API_URL}/api/shoe-size`,
         {
           method: 'POST',
           headers: {
@@ -285,7 +289,7 @@ export function Navbar() {
       const formattedQuery = searchQuery.trim().replace(/\s+/g, "-");
 
       const response = await fetch(
-        `http://localhost:8080/shoes/${formattedQuery}`,
+        `${import.meta.env.VITE_API_URL}/shoes/${formattedQuery}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -397,32 +401,6 @@ export function Navbar() {
                 >
                   <Heart className="h-4 w-4" /> Favorites
                 </Link>
-              )}
-
-              {/* Recommendations button - only visible when authenticated */}
-              {isAuthenticated && (
-                <button
-                  onClick={() => {
-                    // Navigate to home if not already there, then scroll to recommendations
-                    if (location.pathname !== '/') {
-                      navigate('/');
-                      setTimeout(() => {
-                        const recommendationSection = document.querySelector('.home-recommendations-section');
-                        if (recommendationSection) {
-                          recommendationSection.scrollIntoView({ behavior: 'smooth' });
-                        }
-                      }, 100);
-                    } else {
-                      const recommendationSection = document.querySelector('.home-recommendations-section');
-                      if (recommendationSection) {
-                        recommendationSection.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }
-                  }}
-                  className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary flex items-center gap-1"
-                >
-                  <Settings className="h-4 w-4" /> Recommendations
-                </button>
               )}
 
               {!isAuthenticated && <LoginButton />}
@@ -697,14 +675,27 @@ export function Navbar() {
                 </Link>
               )}
 
-              {/* Add Recommendations link to mobile menu */}
-              {isAuthenticated && (
+              {/* Add Recommendations link to mobile menu - only when has preferences */}
+              {isAuthenticated && hasPreferences && (
                 <button
                   className="text-xl font-medium text-foreground transition-colors hover:text-primary flex items-center gap-2 text-left"
                   onClick={() => {
                     toggleMobileMenu();
-                    fetchCurrentPreferences(); // Load current preferences
-                    setShowRecommendationsModal(true);
+                    // Navigate to home if not already there, then scroll to recommendations
+                    if (location.pathname !== '/') {
+                      navigate('/');
+                      setTimeout(() => {
+                        const recommendationSection = document.querySelector('.home-recommendations-section');
+                        if (recommendationSection) {
+                          recommendationSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }, 100);
+                    } else {
+                      const recommendationSection = document.querySelector('.home-recommendations-section');
+                      if (recommendationSection) {
+                        recommendationSection.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }
                   }}
                 >
                   <Settings className="h-5 w-5" /> Recommendations

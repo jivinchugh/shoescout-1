@@ -24,23 +24,23 @@ const promoItems = [
   {
     id: "promo1",
     title: "Only $5 Seller Fee",
-    subtitle: "On All Supreme Products. Ends 4.14.25",
+    subtitle: "On All New Balance Products. Ends 18.01.2026",
     imageUrl: "https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?q=80&w=2012&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     ctaText: "Shop & Sell",
     ctaUrl: "#"
   },
   {
     id: "promo2",
-    title: "New Yeezy Releases",
-    subtitle: "Be the first to grab the newest colorways",
+    title: "New Releases",
+    subtitle: "Grab the newest colorways",
     imageUrl: "https://images.unsplash.com/photo-1574272635740-aa2e5c42edf1?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     ctaText: "Shop Now",
     ctaUrl: "#"
   },
   {
     id: "promo3",
-    title: "Summer Essentials",
-    subtitle: "Get ready for summer with our curated collection",
+    title: "Fall Essentials",
+    subtitle: "Get ready for fall with our curated collection",
     imageUrl: "https://images.unsplash.com/photo-1516478177764-9fe5bd7e9717?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     ctaText: "Explore",
     ctaUrl: "#"
@@ -83,7 +83,7 @@ export default function Home() {
       const token = await getAccessTokenSilently();
       const formattedQuery = randomTerm.trim().replace(/\s+/g, "-");
 
-      const response = await fetch(`http://localhost:8080/shoes/${formattedQuery}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/shoes/${formattedQuery}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -115,7 +115,7 @@ export default function Home() {
   const fetchFavorites = async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch("http://localhost:8080/api/favorites", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -189,7 +189,7 @@ export default function Home() {
 
       if (isInFavorites(shoe.title)) {
         const encodedTitle = encodeURIComponent(shoe.title);
-        await fetch(`http://localhost:8080/api/favorites/${encodedTitle}`, {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/favorites/${encodedTitle}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -198,7 +198,7 @@ export default function Home() {
 
         setFavorites(favorites.filter(fav => fav.title !== shoe.title));
       } else {
-        await fetch("http://localhost:8080/api/favorites", {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
