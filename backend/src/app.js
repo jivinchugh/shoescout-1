@@ -205,6 +205,72 @@ function normalizeResellData(apiData) {
     }
   });
 
+  // Handle GOAT API response structure - check if we have product array
+  if (apiData?.product && Array.isArray(apiData.product)) {
+    console.log('Processing GOAT product array with', apiData.product.length, 'entries');
+    
+    const goatPrices = [];
+    const goatSizes = new Set();
+    
+    apiData.product.forEach(product => {
+      if (product.size && product.lowest_price_cents_usd) {
+        const size = product.size.toString();
+        const price = product.lowest_price_cents_usd / 100; // Convert cents to dollars
+        
+        goatPrices.push({ size, price });
+        goatSizes.add(size);
+        allSizes.add(size);
+      }
+    });
+    
+    if (goatPrices.length > 0) {
+      sizeSpecificPrices.goat = goatPrices;
+      console.log(`Extracted ${goatPrices.length} GOAT size-specific prices`);
+    }
+  }
+
+  // Handle GOAT data from resellPrices.goat array
+  if (prices.goat && Array.isArray(prices.goat)) {
+    console.log('Processing GOAT resellPrices array with', prices.goat.length, 'entries');
+    
+    const goatPrices = [];
+    prices.goat.forEach(item => {
+      if (item.size && item.lowestPrice) {
+        const size = item.size.toString();
+        const price = item.lowestPrice;
+        
+        goatPrices.push({ size, price });
+        allSizes.add(size);
+      }
+    });
+    
+    if (goatPrices.length > 0) {
+      sizeSpecificPrices.goat = goatPrices;
+      console.log(`Extracted ${goatPrices.length} GOAT size-specific prices from resellPrices`);
+    }
+  }
+
+  // Handle Flight Club data from resellPrices.flightClub.newSizes array
+  if (prices.flightClub && prices.flightClub.newSizes && Array.isArray(prices.flightClub.newSizes)) {
+    console.log('Processing Flight Club newSizes array with', prices.flightClub.newSizes.length, 'entries');
+    
+    const flightClubPrices = [];
+    prices.flightClub.newSizes.forEach(item => {
+      if (item.size && item.size.value && item.lowestPriceOption && item.lowestPriceOption.price) {
+        const size = item.size.value.toString();
+        const price = item.lowestPriceOption.price;
+        
+        flightClubPrices.push({ size, price });
+        allSizes.add(size);
+      }
+    });
+    
+    if (flightClubPrices.length > 0) {
+      sizeSpecificPrices.flightClub = flightClubPrices;
+      console.log(`Extracted ${flightClubPrices.length} Flight Club size-specific prices`);
+    }
+  }
+
   // Convert Set to sorted array
   const availableSizes = Array.from(allSizes).sort((a, b) => {
     const aNum = parseFloat(a);
@@ -215,29 +281,8 @@ function normalizeResellData(apiData) {
   console.log('Extracted size-specific prices keys:', Object.keys(sizeSpecificPrices));
   console.log('Available sizes count:', availableSizes.length);
 
-  // Generate sample size data for platforms that don't have it but have base prices
-  const platforms = ['stockX', 'goat', 'flightClub', 'stadiumGoods'];
-  const sampleSizes = ['7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13'];
-  
-  platforms.forEach(platform => {
-    const basePrice = resellPrices[platform];
-    const hasSizeData = sizeSpecificPrices[platform] && sizeSpecificPrices[platform].length > 0;
-    
-    if (basePrice && !hasSizeData) {
-      console.log(`Generating sample size data for ${platform} with base price ${basePrice}`);
-      sizeSpecificPrices[platform] = sampleSizes.map(size => ({
-        size: size,
-        price: Math.round(basePrice * (0.8 + Math.random() * 0.4)) // ±20% variation
-      }));
-      sampleSizes.forEach(size => allSizes.add(size));
-    }
-  });
-  
-  // Update available sizes if we generated new ones
-  if (allSizes.size > availableSizes.length) {
-    availableSizes.length = 0; // Clear existing
-    availableSizes.push(...Array.from(allSizes).sort((a, b) => parseFloat(a) - parseFloat(b)));
-  }
+  // Only use real size data from the API responses
+  // No sample data generation - only display actual available sizes and prices
 
   // Additional debugging - log what we actually extracted
   console.log('Final extracted data:');
