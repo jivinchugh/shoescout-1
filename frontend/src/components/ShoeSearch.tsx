@@ -86,7 +86,7 @@ export default function ShoeSearch() {
   const fetchFavorites = async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch("http://localhost:8080/api/favorites", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -123,7 +123,7 @@ const handleSearch = async (e: React.FormEvent) => {
     const token = await getAccessTokenSilently();
     const formattedQuery = query.trim().replace(/\s+/g, "-");
 
-    const response = await fetch(`http://localhost:8080/shoes/${formattedQuery}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/shoes/${formattedQuery}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -172,7 +172,7 @@ const handleSearch = async (e: React.FormEvent) => {
     try {
       const token = await getAccessTokenSilently();
       
-      const response = await fetch("http://localhost:8080/api/favorites", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -207,7 +207,7 @@ const handleSearch = async (e: React.FormEvent) => {
       // URL encode the title for the API endpoint
       const encodedTitle = encodeURIComponent(shoeTitle);
       
-      const response = await fetch(`http://localhost:8080/api/favorites/${encodedTitle}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites/${encodedTitle}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

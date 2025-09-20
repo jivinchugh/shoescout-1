@@ -80,7 +80,7 @@ export function Navbar() {
     try {
       const token = await getAccessTokenSilently();
       const response = await fetch(
-        `http://localhost:8080/api/shoe-size`,
+        `${import.meta.env.VITE_API_URL}/api/shoe-size`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -132,7 +132,7 @@ export function Navbar() {
       // API call with tempShoeSize
       const token = await getAccessTokenSilently();
       const response = await fetch(
-        `http://localhost:8080/api/shoe-size`,
+        `${import.meta.env.VITE_API_URL}/api/shoe-size`,
         {
           method: 'POST',
           headers: {
@@ -167,7 +167,7 @@ export function Navbar() {
   const fetchCurrentPreferences = useCallback(async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-preferences`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -189,7 +189,7 @@ export function Navbar() {
     setLoadingRecommendations(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:8080/api/user-preferences', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-preferences`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -233,7 +233,7 @@ export function Navbar() {
     try {
       const token = await getAccessTokenSilently();
       const response = await fetch(
-        `http://localhost:8080/api/shoe-size`,
+        `${import.meta.env.VITE_API_URL}/api/shoe-size`,
         {
           method: 'POST',
           headers: {
@@ -289,7 +289,7 @@ export function Navbar() {
       const formattedQuery = searchQuery.trim().replace(/\s+/g, "-");
 
       const response = await fetch(
-        `http://localhost:8080/shoes/${formattedQuery}`,
+        `${import.meta.env.VITE_API_URL}/shoes/${formattedQuery}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

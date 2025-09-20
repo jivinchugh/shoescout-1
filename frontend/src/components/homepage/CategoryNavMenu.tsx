@@ -83,7 +83,7 @@ export function CategoryNavMenu() {
         .replace(/\s+/g, "-");
 
       const response = await fetch(
-        `http://localhost:8080/shoes/${formattedQuery}?type=shoes`, // Added type parameter
+        `${import.meta.env.VITE_API_URL}/shoes/${formattedQuery}?type=shoes`, // Added type parameter
         {
           headers: {
             Authorization: `Bearer ${token}`,

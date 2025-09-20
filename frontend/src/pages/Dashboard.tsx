@@ -29,7 +29,7 @@ const Dashboard = () => {
       if (isInFavorites(shoe.title)) {
         // Remove from favorites
         const encodedTitle = encodeURIComponent(shoe.title);
-        await fetch(`http://localhost:8080/api/favorites/${encodedTitle}`, {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/favorites/${encodedTitle}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -40,7 +40,7 @@ const Dashboard = () => {
         setFavorites(favorites.filter(fav => fav.title !== shoe.title));
       } else {
         // Add to favorites
-        await fetch("http://localhost:8080/api/favorites", {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -67,7 +67,7 @@ const Dashboard = () => {
   const fetchFavorites = async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch("http://localhost:8080/api/favorites", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/favorites`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

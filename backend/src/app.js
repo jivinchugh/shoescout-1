@@ -2,7 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const { createUser, getUser, saveUserShoeSize, getUserShoeSize, saveUserPreferences, addFavoriteShoe, removeFavoriteShoe, getUserFavorites } = require('./models/user');
+const {
+  createUser,
+  getUser,
+  saveUserShoeSize,
+  getUserShoeSize,
+  saveUserPreferences,
+  addFavoriteShoe,
+  removeFavoriteShoe,
+  getUserFavorites,
+} = require('./models/user');
 const retryRequest = require('./retryAxios');
 
 // author and version from our package.json file
@@ -22,7 +31,18 @@ const app = express();
 // Use middleware
 app.use(pino);
 app.use(helmet());
-app.use(cors());
+
+// CORS configuration for production
+const corsOptions = {
+  origin:
+    process.env.NODE_ENV === 'production'
+      ? ['https://shoescout-723a.onrender.com'] // Update this with your actual Netlify URL
+      : ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 app.use(compression());
 app.use(express.json());
 
@@ -48,11 +68,11 @@ function normalizeResellData(apiData) {
   const fallbackPrices = (() => {
     const brands = ['stockX', 'goat', 'flightClub', 'stadiumGoods'];
     const fallback = {};
-    brands.forEach(brand => {
+    brands.forEach((brand) => {
       const data = prices[brand];
       if (Array.isArray(data)) {
-        const valid = data.filter(p => typeof p.price === 'number');
-        if (valid.length) fallback[brand] = Math.min(...valid.map(v => v.price));
+        const valid = data.filter((p) => typeof p.price === 'number');
+        if (valid.length) fallback[brand] = Math.min(...valid.map((v) => v.price));
       } else if (data?.newLowestPrice?.value) {
         fallback[brand] = data.newLowestPrice.value / 100;
       }
@@ -67,35 +87,36 @@ function normalizeResellData(apiData) {
       stockX: resellPrices.stockX || null,
       goat: resellPrices.goat || null,
       flightClub: resellPrices.flightClub || null,
-      stadiumGoods: resellPrices.stadiumGoods || null
+      stadiumGoods: resellPrices.stadiumGoods || null,
     },
     resell_links: {
       stockX: links.stockX || '',
       goat: links.goat || '',
       flightClub: links.flightClub || '',
-      stadiumGoods: links.stadiumGoods || ''
+      stadiumGoods: links.stadiumGoods || '',
     },
-    resell_data_found: Object.values(resellPrices).some(p => p !== null && p !== undefined)
+    resell_data_found: Object.values(resellPrices).some((p) => p !== null && p !== undefined),
   };
 }
 
 app.get('/shoes/:query', async (req, res) => {
   const query = req.params.query;
-  
+
   // Add basic caching with a simple in-memory store
   const cacheKey = query.toLowerCase();
-  if (searchCache[cacheKey] && Date.now() - searchCache[cacheKey].timestamp < 3600000) { // 1 hour cache
+  if (searchCache[cacheKey] && Date.now() - searchCache[cacheKey].timestamp < 3600000) {
+    // 1 hour cache
     logger.info(`Returning cached results for "${query}"`);
     return res.json(searchCache[cacheKey].results);
   }
-  
+
   const retailOptions = {
     method: 'GET',
     url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(query)}`,
     headers: {
       'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
-      'X-RapidAPI-Host': process.env.STOCKX_API_HOST
-    }
+      'X-RapidAPI-Host': process.env.STOCKX_API_HOST,
+    },
   };
 
   try {
@@ -105,7 +126,7 @@ app.get('/shoes/:query', async (req, res) => {
     const shoes = retailRes.data.hits.slice(0, 5);
 
     // Process basic shoe data
-    const basicResults = shoes.map(shoe => {
+    const basicResults = shoes.map((shoe) => {
       return {
         title: shoe.title,
         retail_price: shoe.retail_price || 'N/A',
@@ -114,10 +135,10 @@ app.get('/shoes/:query', async (req, res) => {
         image_url: shoe.image || '',
         lowest_resell_prices: {},
         resell_links: {},
-        resell_data_found: false
+        resell_data_found: false,
       };
     });
-    
+
     // Try to fetch detailed pricing data for the first shoe
     if (shoes[0]?.sku) {
       try {
@@ -133,21 +154,20 @@ app.get('/shoes/:query', async (req, res) => {
 
         if (skuRes.data) {
           const resellData = normalizeResellData(skuRes.data);
-          basicResults[0] = {...basicResults[0], ...resellData};
+          basicResults[0] = { ...basicResults[0], ...resellData };
         }
       } catch (err) {
         logger.debug(`Resell data fetch failed for ${shoes[0].sku}: ${err.message}`);
       }
     }
-    
+
     // Now we can cache and send the response after all processing is complete
     searchCache[cacheKey] = {
       results: basicResults,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     res.json(basicResults);
-    
   } catch (err) {
     logger.error(err.message);
     res.status(500).json({ error: 'Failed to fetch shoe data' });
@@ -194,13 +214,13 @@ protectedRouter.get('/shoe-size', async (req, res) => {
     if (!user) {
       return res.status(404).json({
         message: 'No shoe size found for this user',
-        auth0Id: req.auth0Id
+        auth0Id: req.auth0Id,
       });
     }
 
     res.status(200).json({
       auth0Id: user.auth0Id,
-      shoeSize: user.shoeSize
+      shoeSize: user.shoeSize,
     });
   } catch (err) {
     logger.error('Error fetching shoe size', err);
@@ -219,16 +239,15 @@ protectedRouter.post('/shoe-size', async (req, res) => {
   if (typeof shoeSize !== 'number') {
     return res.status(400).json({ error: 'Shoe size must be a number' });
   }
-  
+
   // Add validation for decimal values and max size
   if (shoeSize <= 0 || shoeSize > 15) {
     return res.status(400).json({ error: 'Shoe size must be between 0 and 15' });
   }
-  
+
   // Check if it's a whole number or ends with .5
-  const isValid = Number.isInteger(shoeSize) || 
-                  (shoeSize * 10) % 5 === 0; // Checks if decimal part is .0 or .5
-                  
+  const isValid = Number.isInteger(shoeSize) || (shoeSize * 10) % 5 === 0; // Checks if decimal part is .0 or .5
+
   if (!isValid) {
     return res.status(400).json({ error: 'Shoe size must be a whole number or end with .5' });
   }
@@ -238,7 +257,7 @@ protectedRouter.post('/shoe-size', async (req, res) => {
     res.status(200).json({
       auth0Id: user.auth0Id,
       shoeSize: user.shoeSize,
-      message: 'Shoe size saved successfully'
+      message: 'Shoe size saved successfully',
     });
   } catch (err) {
     logger.error('Error saving shoe size', err);
@@ -252,7 +271,7 @@ protectedRouter.get('/user-preferences', async (req, res) => {
     const user = await getUser(req.auth0Id);
     res.status(200).json({
       auth0Id: req.auth0Id,
-      preferences: user?.preferences || []
+      preferences: user?.preferences || [],
     });
   } catch (err) {
     logger.error('Error fetching user preferences', err);
@@ -277,7 +296,7 @@ protectedRouter.post('/user-preferences', async (req, res) => {
     res.status(200).json({
       auth0Id: user.auth0Id,
       preferences: user.preferences,
-      message: 'Brand preferences saved successfully'
+      message: 'Brand preferences saved successfully',
     });
   } catch (err) {
     logger.error('Error saving user preferences', err);
@@ -291,7 +310,7 @@ protectedRouter.get('/favorites', async (req, res) => {
     const favorites = await getUserFavorites(req.auth0Id);
     res.status(200).json({
       auth0Id: req.auth0Id,
-      favorites
+      favorites,
     });
   } catch (err) {
     logger.error('Error fetching favorites', err);
@@ -312,7 +331,7 @@ protectedRouter.post('/favorites', async (req, res) => {
     res.status(200).json({
       message: 'Shoe added to favorites successfully',
       auth0Id: user.auth0Id,
-      favorites: user.favorites
+      favorites: user.favorites,
     });
   } catch (err) {
     logger.error('Error adding favorite', err);
@@ -329,7 +348,7 @@ protectedRouter.delete('/favorites/:title', async (req, res) => {
     res.status(200).json({
       message: 'Shoe removed from favorites successfully',
       auth0Id: user.auth0Id,
-      favorites: user.favorites
+      favorites: user.favorites,
     });
   } catch (err) {
     logger.error('Error removing favorite', err);
@@ -342,203 +361,292 @@ protectedRouter.get('/auth-check', (req, res) => {
   res.status(200).json({
     message: 'Authentication successful',
     auth0Id: req.auth0Id,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
-  // Recommendation endpoint: suggest shoes based on user's preferences or favorite brands
-  protectedRouter.get('/recommendations', async (req, res) => {
-    try {
-      // Get user's preferences first
-      const user = await getUser(req.auth0Id);
-      let brandsToUse = [];
-      
-      if (user?.preferences && user.preferences.length > 0) {
-        // Use user-selected preferences if available
-        brandsToUse = user.preferences;
-        logger.info(`Using user preferences for recommendations: ${brandsToUse.join(', ')}`);
-      } else {
-        // Fall back to extracting brands from favorites
-        const favorites = await getUserFavorites(req.auth0Id);
-        if (!favorites || favorites.length === 0) {
-          return res.status(200).json({ recommendations: [], message: 'No preferences or favorites found for user.' });
-        }
+// Recommendation endpoint: suggest shoes based on user's preferences or favorite brands
+protectedRouter.get('/recommendations', async (req, res) => {
+  try {
+    // Get user's preferences first
+    const user = await getUser(req.auth0Id);
+    let brandsToUse = [];
 
-        // Extract brands from favorites
-        const brandCounts = {};
-        favorites.forEach(fav => {
-          if (fav.brand) {
-            brandCounts[fav.brand] = (brandCounts[fav.brand] || 0) + 1;
-          }
-        });
-        
-        // Sort brands by frequency and take top 2
-        const sortedBrands = Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a]);
-        if (sortedBrands.length === 0) {
-          return res.status(200).json({ recommendations: [], message: 'No brand preferences found.' });
-        }
-        brandsToUse = sortedBrands.slice(0, 2);
-        logger.info(`Using brands from favorites for recommendations: ${brandsToUse.join(', ')}`);
+    if (user?.preferences && user.preferences.length > 0) {
+      // Use user-selected preferences if available
+      brandsToUse = user.preferences;
+      logger.info(`Using user preferences for recommendations: ${brandsToUse.join(', ')}`);
+    } else {
+      // Fall back to extracting brands from favorites
+      const favorites = await getUserFavorites(req.auth0Id);
+      if (!favorites || favorites.length === 0) {
+        return res
+          .status(200)
+          .json({ recommendations: [], message: 'No preferences or favorites found for user.' });
       }
 
-      // Fetch recommended shoes for the selected brands
-      const recommended = [];
-      const targetPerBrand = Math.ceil(40 / brandsToUse.length); // Distribute 40 shoes across brands
-      
-      for (const brand of brandsToUse) {
-        let brandShoes = [];
-        
-        // Use specific shoe keywords to filter for shoes only
-        const shoeKeywords = ['sneakers', 'shoes', 'jordans', 'boots', 'running shoes', 'basketball shoes', 'tennis shoes'];
-        
-        for (const keyword of shoeKeywords) {
-          // If we already have enough shoes for this brand, break
-          if (brandShoes.length >= targetPerBrand) break;
-          
-          const retailOptions = {
-            method: 'GET',
-            url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(`${brand} ${keyword}`)}`,
-            headers: {
-              'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
-              'X-RapidAPI-Host': process.env.STOCKX_API_HOST
-            }
-          };
-          
-          try {
-            const retailRes = await retryRequest(retailOptions);
-            if (retailRes.data?.hits) {
-              // Filter out non-shoe items by checking title for shoe-related terms
-              const filteredShoes = retailRes.data.hits.filter(shoe => {
-                const title = shoe.title.toLowerCase();
-                
-                // Define shoe-related terms (must include at least one)
-                const shoeTerms = [
-                  'shoe', 'sneaker', 'jordan', 'air force', 'air max', 'air jordan',
-                  'runner', 'trainer', 'boot', 'loafer', 'oxford', 'slip-on',
-                  'sandal', 'flip-flop', 'cleat', 'basketball', 'tennis',
-                  'running', 'athletic', 'casual', 'formal', 'dress shoe',
-                  'pump', 'heel', 'flat', 'moccasin', 'espadrille', 'wedge'
-                ];
-                
-                // Define non-shoe items to exclude (if any of these are found, exclude the item)
-                const excludeTerms = [
-                  'bag', 'backpack', 'sock', 'socks', 'tote', 'purse', 'wallet',
-                  'belt', 'hat', 'cap', 'beanie', 'shirt', 'hoodie', 'jacket',
-                  'pants', 'shorts', 'gloves', 'scarf', 'card', 'trading card',
-                  'pokemon', 'pokémon', 'collectible', 'figurine', 'toy',
-                  'accessory', 'keychain', 'sticker', 'poster', 'phone case',
-                  'watch', 'sunglasses', 'necklace', 'bracelet', 'ring',
-                  'earring', 'underwear', 'brief', 'boxer', 'bra', 'panty'
-                ];
-                
-                // Check if title contains any shoe terms
-                const hasShoeTerms = shoeTerms.some(term => title.includes(term));
-                
-                // Check if title contains any exclude terms
-                const hasExcludeTerms = excludeTerms.some(term => title.includes(term));
-                
-                // Only include if it has shoe terms AND doesn't have exclude terms
-                return hasShoeTerms && !hasExcludeTerms;
-              });
-              
-              // Add shoes to brand collection, avoiding duplicates
-              for (const shoe of filteredShoes) {
-                if (brandShoes.length >= targetPerBrand) break;
-                
-                // Check for duplicates by title
-                const isDuplicate = brandShoes.some(existing => existing.title === shoe.title);
-                if (!isDuplicate) {
-                  brandShoes.push({
-                    title: shoe.title,
-                    retail_price: shoe.retail_price || 'N/A',
-                    description: shoe.description || '',
-                    sku: shoe.sku || '',
-                    image_url: shoe.image || '',
-                    brand: brand
-                  });
-                }
-              }
-            }
-          } catch (err) {
-            logger.error(`Failed to fetch recommendations for brand ${brand} with keyword ${keyword}: ${err.message}`);
-          }
+      // Extract brands from favorites
+      const brandCounts = {};
+      favorites.forEach((fav) => {
+        if (fav.brand) {
+          brandCounts[fav.brand] = (brandCounts[fav.brand] || 0) + 1;
         }
-        
-        // Add this brand's shoes to the overall collection
-        recommended.push(...brandShoes);
-        logger.info(`Added ${brandShoes.length} shoes for brand ${brand}`);
+      });
+
+      // Sort brands by frequency and take top 2
+      const sortedBrands = Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a]);
+      if (sortedBrands.length === 0) {
+        return res
+          .status(200)
+          .json({ recommendations: [], message: 'No brand preferences found.' });
       }
-      
-      // If we don't have exactly 40, trim or pad as needed
-      let finalRecommendations = [...recommended];
-      if (finalRecommendations.length > 40) {
-        // Shuffle first, then take exactly 40
-        for (let i = finalRecommendations.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [finalRecommendations[i], finalRecommendations[j]] = [finalRecommendations[j], finalRecommendations[i]];
-        }
-        finalRecommendations = finalRecommendations.slice(0, 40);
-      } else if (finalRecommendations.length < 40) {
-        // If we have fewer than 40, try to fetch more from a broader search
-        const additionalNeeded = 40 - finalRecommendations.length;
-        logger.info(`Need ${additionalNeeded} more shoes to reach 40 total`);
-        
-        // Broader search for popular shoe brands to fill the gap
-        const popularBrands = ['Nike', 'Adidas', 'Jordan', 'New Balance', 'Puma', 'Vans', 'Converse'];
-        
-        for (const brand of popularBrands) {
-          if (finalRecommendations.length >= 40) break;
-          
-          const retailOptions = {
-            method: 'GET',
-            url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(`${brand} shoes`)}`,
-            headers: {
-              'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
-              'X-RapidAPI-Host': process.env.STOCKX_API_HOST
-            }
-          };
-          
-          try {
-            const retailRes = await retryRequest(retailOptions);
-            if (retailRes.data?.hits) {
-              const filteredShoes = retailRes.data.hits.filter(shoe => {
-                const title = shoe.title.toLowerCase();
-                const hasShoeTerms = ['shoe', 'sneaker', 'jordan', 'air', 'runner', 'trainer', 'boot'].some(term => title.includes(term));
-                const hasExcludeTerms = ['bag', 'sock', 'card', 'pokemon', 'accessory'].some(term => title.includes(term));
-                const isDuplicate = finalRecommendations.some(existing => existing.title === shoe.title);
-                return hasShoeTerms && !hasExcludeTerms && !isDuplicate;
-              });
-              
-              for (const shoe of filteredShoes.slice(0, additionalNeeded)) {
-                if (finalRecommendations.length >= 40) break;
-                finalRecommendations.push({
+      brandsToUse = sortedBrands.slice(0, 2);
+      logger.info(`Using brands from favorites for recommendations: ${brandsToUse.join(', ')}`);
+    }
+
+    // Fetch recommended shoes for the selected brands
+    const recommended = [];
+    const targetPerBrand = Math.ceil(40 / brandsToUse.length); // Distribute 40 shoes across brands
+
+    for (const brand of brandsToUse) {
+      let brandShoes = [];
+
+      // Use specific shoe keywords to filter for shoes only
+      const shoeKeywords = [
+        'sneakers',
+        'shoes',
+        'jordans',
+        'boots',
+        'running shoes',
+        'basketball shoes',
+        'tennis shoes',
+      ];
+
+      for (const keyword of shoeKeywords) {
+        // If we already have enough shoes for this brand, break
+        if (brandShoes.length >= targetPerBrand) break;
+
+        const retailOptions = {
+          method: 'GET',
+          url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(`${brand} ${keyword}`)}`,
+          headers: {
+            'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
+            'X-RapidAPI-Host': process.env.STOCKX_API_HOST,
+          },
+        };
+
+        try {
+          const retailRes = await retryRequest(retailOptions);
+          if (retailRes.data?.hits) {
+            // Filter out non-shoe items by checking title for shoe-related terms
+            const filteredShoes = retailRes.data.hits.filter((shoe) => {
+              const title = shoe.title.toLowerCase();
+
+              // Define shoe-related terms (must include at least one)
+              const shoeTerms = [
+                'shoe',
+                'sneaker',
+                'jordan',
+                'air force',
+                'air max',
+                'air jordan',
+                'runner',
+                'trainer',
+                'boot',
+                'loafer',
+                'oxford',
+                'slip-on',
+                'sandal',
+                'flip-flop',
+                'cleat',
+                'basketball',
+                'tennis',
+                'running',
+                'athletic',
+                'casual',
+                'formal',
+                'dress shoe',
+                'pump',
+                'heel',
+                'flat',
+                'moccasin',
+                'espadrille',
+                'wedge',
+              ];
+
+              // Define non-shoe items to exclude (if any of these are found, exclude the item)
+              const excludeTerms = [
+                'bag',
+                'backpack',
+                'sock',
+                'socks',
+                'tote',
+                'purse',
+                'wallet',
+                'belt',
+                'hat',
+                'cap',
+                'beanie',
+                'shirt',
+                'hoodie',
+                'jacket',
+                'pants',
+                'shorts',
+                'gloves',
+                'scarf',
+                'card',
+                'trading card',
+                'pokemon',
+                'pokémon',
+                'collectible',
+                'figurine',
+                'toy',
+                'accessory',
+                'keychain',
+                'sticker',
+                'poster',
+                'phone case',
+                'watch',
+                'sunglasses',
+                'necklace',
+                'bracelet',
+                'ring',
+                'earring',
+                'underwear',
+                'brief',
+                'boxer',
+                'bra',
+                'panty',
+              ];
+
+              // Check if title contains any shoe terms
+              const hasShoeTerms = shoeTerms.some((term) => title.includes(term));
+
+              // Check if title contains any exclude terms
+              const hasExcludeTerms = excludeTerms.some((term) => title.includes(term));
+
+              // Only include if it has shoe terms AND doesn't have exclude terms
+              return hasShoeTerms && !hasExcludeTerms;
+            });
+
+            // Add shoes to brand collection, avoiding duplicates
+            for (const shoe of filteredShoes) {
+              if (brandShoes.length >= targetPerBrand) break;
+
+              // Check for duplicates by title
+              const isDuplicate = brandShoes.some((existing) => existing.title === shoe.title);
+              if (!isDuplicate) {
+                brandShoes.push({
                   title: shoe.title,
                   retail_price: shoe.retail_price || 'N/A',
                   description: shoe.description || '',
                   sku: shoe.sku || '',
                   image_url: shoe.image || '',
-                  brand: brand
+                  brand: brand,
                 });
               }
             }
-          } catch (err) {
-            logger.error(`Failed to fetch additional shoes for brand ${brand}: ${err.message}`);
           }
+        } catch (err) {
+          logger.error(
+            `Failed to fetch recommendations for brand ${brand} with keyword ${keyword}: ${err.message}`
+          );
         }
       }
-      
-      // Final shuffle of exactly 40 recommendations
+
+      // Add this brand's shoes to the overall collection
+      recommended.push(...brandShoes);
+      logger.info(`Added ${brandShoes.length} shoes for brand ${brand}`);
+    }
+
+    // If we don't have exactly 40, trim or pad as needed
+    let finalRecommendations = [...recommended];
+    if (finalRecommendations.length > 40) {
+      // Shuffle first, then take exactly 40
       for (let i = finalRecommendations.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [finalRecommendations[i], finalRecommendations[j]] = [finalRecommendations[j], finalRecommendations[i]];
+        [finalRecommendations[i], finalRecommendations[j]] = [
+          finalRecommendations[j],
+          finalRecommendations[i],
+        ];
       }
-      
-      logger.info(`Returning exactly ${finalRecommendations.length} randomized recommendations`);
-      res.status(200).json({ recommendations: finalRecommendations });
-    } catch (err) {
-      logger.error('Error generating recommendations', err);
-      res.status(500).json({ error: 'Internal Server Error', details: err.message });
+      finalRecommendations = finalRecommendations.slice(0, 40);
+    } else if (finalRecommendations.length < 40) {
+      // If we have fewer than 40, try to fetch more from a broader search
+      const additionalNeeded = 40 - finalRecommendations.length;
+      logger.info(`Need ${additionalNeeded} more shoes to reach 40 total`);
+
+      // Broader search for popular shoe brands to fill the gap
+      const popularBrands = ['Nike', 'Adidas', 'Jordan', 'New Balance', 'Puma', 'Vans', 'Converse'];
+
+      for (const brand of popularBrands) {
+        if (finalRecommendations.length >= 40) break;
+
+        const retailOptions = {
+          method: 'GET',
+          url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(`${brand} shoes`)}`,
+          headers: {
+            'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
+            'X-RapidAPI-Host': process.env.STOCKX_API_HOST,
+          },
+        };
+
+        try {
+          const retailRes = await retryRequest(retailOptions);
+          if (retailRes.data?.hits) {
+            const filteredShoes = retailRes.data.hits.filter((shoe) => {
+              const title = shoe.title.toLowerCase();
+              const hasShoeTerms = [
+                'shoe',
+                'sneaker',
+                'jordan',
+                'air',
+                'runner',
+                'trainer',
+                'boot',
+              ].some((term) => title.includes(term));
+              const hasExcludeTerms = ['bag', 'sock', 'card', 'pokemon', 'accessory'].some((term) =>
+                title.includes(term)
+              );
+              const isDuplicate = finalRecommendations.some(
+                (existing) => existing.title === shoe.title
+              );
+              return hasShoeTerms && !hasExcludeTerms && !isDuplicate;
+            });
+
+            for (const shoe of filteredShoes.slice(0, additionalNeeded)) {
+              if (finalRecommendations.length >= 40) break;
+              finalRecommendations.push({
+                title: shoe.title,
+                retail_price: shoe.retail_price || 'N/A',
+                description: shoe.description || '',
+                sku: shoe.sku || '',
+                image_url: shoe.image || '',
+                brand: brand,
+              });
+            }
+          }
+        } catch (err) {
+          logger.error(`Failed to fetch additional shoes for brand ${brand}: ${err.message}`);
+        }
+      }
     }
-  });
+
+    // Final shuffle of exactly 40 recommendations
+    for (let i = finalRecommendations.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [finalRecommendations[i], finalRecommendations[j]] = [
+        finalRecommendations[j],
+        finalRecommendations[i],
+      ];
+    }
+
+    logger.info(`Returning exactly ${finalRecommendations.length} randomized recommendations`);
+    res.status(200).json({ recommendations: finalRecommendations });
+  } catch (err) {
+    logger.error('Error generating recommendations', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
+});
 // Export our app so we can access it in server.js
 module.exports = app;
