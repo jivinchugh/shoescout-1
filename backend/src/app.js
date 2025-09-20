@@ -22,10 +22,12 @@ const app = express();
 // Use middleware
 app.use(pino);
 app.use(helmet());
+
+// CORS configuration for production
 const corsOptions = {
   origin:
     process.env.NODE_ENV === 'production'
-      ? ['https://shoescout-723a.onrender.com'] 
+      ? ['https://shoescout-723a.onrender.com'] // Update this with your actual Netlify URL
       : ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true,
   optionsSuccessStatus: 200,
