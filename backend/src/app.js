@@ -386,14 +386,6 @@ app.get('/shoes/:query', async (req, res) => {
           basicResults[0] = {...basicResults[0], ...resellData};
           
           // Add debug information to the response
-          basicResults[0].debug_info = {
-            raw_api_response_structure: {
-              hasResellPrices: !!skuRes.data.resellPrices,
-              resellPricesKeys: skuRes.data.resellPrices ? Object.keys(skuRes.data.resellPrices) : [],
-              hasLowestResellPrice: !!skuRes.data.lowestResellPrice,
-              hasResellLinks: !!skuRes.data.resellLinks
-            }
-          };
         }
       } catch (err) {
         logger.debug(`Resell data fetch failed for ${shoes[0].sku}: ${err.message}`);
