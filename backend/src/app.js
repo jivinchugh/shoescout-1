@@ -32,12 +32,13 @@ const app = express();
 app.use(pino);
 app.use(helmet());
 
-// CORS configuration for production
+
+// CORS configuration for production and development
 const corsOptions = {
-  origin:
-    process.env.NODE_ENV === 'production'
-      ? ['https://shoescout-723a.onrender.com'] // Update this with your actual Netlify URL
-      : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: [
+    'http://localhost:5173',
+    'https://shoescout.netlify.app' // frontend (Vite)
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
 };
@@ -657,23 +658,7 @@ app.get('/debug-api/:query', async (req, res) => {
   }
 });
 
-  // Recommendation endpoint: suggest shoes based on user's preferences or favorite brands
-  protectedRouter.get('/recommendations', async (req, res) => {
-    try {
-      // Get user's preferences first
-      const user = await getUser(req.auth0Id);
-      let brandsToUse = [];
-      
-      if (user?.preferences && user.preferences.length > 0) {
-        // Use user-selected preferences if available
-        brandsToUse = user.preferences;
-        logger.info(`Using user preferences for recommendations: ${brandsToUse.join(', ')}`);
-      } else {
-        // Fall back to extracting brands from favorites
-        const favorites = await getUserFavorites(req.auth0Id);
-        if (!favorites || favorites.length === 0) {
-          return res.status(200).json({ recommendations: [], message: 'No preferences or favorites found for user.' });
-        }
+  
 // Recommendation endpoint: suggest shoes based on user's preferences or favorite brands
 protectedRouter.get('/recommendations', async (req, res) => {
   try {
