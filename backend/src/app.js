@@ -65,254 +65,22 @@ function normalizeResellData(apiData) {
   const links = apiData?.resellLinks || {};
   const prices = apiData?.resellPrices || {};
 
-  // Debug logging to understand API response structure
-  console.log('=== API DEBUG INFO ===');
-  console.log('API Data Structure keys:', Object.keys(apiData || {}));
-  console.log('Prices object keys:', Object.keys(prices || {}));
-
   const fallbackPrices = (() => {
     const brands = ['stockX', 'goat', 'flightClub', 'stadiumGoods'];
     const fallback = {};
     brands.forEach((brand) => {
       const data = prices[brand];
-      console.log(`Processing ${brand}:`, data ? Object.keys(data) : 'null');
-      
       if (Array.isArray(data)) {
         const valid = data.filter((p) => typeof p.price === 'number');
         if (valid.length) fallback[brand] = Math.min(...valid.map((v) => v.price));
       } else if (data?.newLowestPrice?.value) {
         fallback[brand] = data.newLowestPrice.value / 100;
-      } else if (data?.lowestPrice?.value) {
-        fallback[brand] = data.lowestPrice.value / 100;
-      } else if (data?.price) {
-        fallback[brand] = data.price;
-      } else if (typeof data === 'number') {
-        fallback[brand] = data;
-      } else if (data && typeof data === 'object') {
-        // Try to find any price field in the object
-        const priceFields = ['price', 'lowestPrice', 'newLowestPrice', 'value', 'ask'];
-        for (const field of priceFields) {
-          if (data[field] && typeof data[field] === 'number') {
-            fallback[brand] = data[field];
-            break;
-          } else if (data[field]?.value && typeof data[field].value === 'number') {
-            fallback[brand] = data[field].value / 100;
-            break;
-          }
-        }
       }
     });
-    
-    // Special handling for StockX - it might be in a different location
-    if (!fallback.stockX && lowest.stockX) {
-      fallback.stockX = lowest.stockX;
-      console.log('Using StockX from lowestResellPrice:', lowest.stockX);
-    }
-    
     return fallback;
   })();
 
   const resellPrices = Object.keys(lowest).length ? lowest : fallbackPrices;
-
-  // Extract size-specific pricing data
-  const sizeSpecificPrices = {};
-  const allSizes = new Set();
-
-  const brands = ['stockX', 'goat', 'flightClub', 'stadiumGoods'];
-  brands.forEach(brand => {
-    const data = prices[brand];
-    console.log(`Extracting size data for ${brand}:`, data ? Object.keys(data) : 'null');
-    
-    if (Array.isArray(data)) {
-      // Filter valid price entries and extract size data
-      const validPrices = data.filter(p => 
-        typeof p.price === 'number' && 
-        p.size && 
-        typeof p.size === 'string'
-      );
-      
-      if (validPrices.length > 0) {
-        sizeSpecificPrices[brand] = validPrices.map(p => ({
-          size: p.size,
-          price: p.price
-        }));
-        
-        // Add sizes to our set
-        validPrices.forEach(p => allSizes.add(p.size));
-      }
-    } else if (data && typeof data === 'object') {
-      // Handle different API response structures
-      const possibleSizeArrays = ['sizes', 'sizeData', 'prices', 'data', 'results', 'items'];
-      
-      for (const arrayKey of possibleSizeArrays) {
-        if (data[arrayKey] && Array.isArray(data[arrayKey])) {
-          const validPrices = data[arrayKey].filter(p => 
-            typeof p.price === 'number' && 
-            p.size && 
-            typeof p.size === 'string'
-          );
-          
-          if (validPrices.length > 0) {
-            sizeSpecificPrices[brand] = validPrices.map(p => ({
-              size: p.size,
-              price: p.price
-            }));
-            
-            validPrices.forEach(p => allSizes.add(p.size));
-            break; // Found valid data, stop looking
-          }
-        }
-      }
-      
-      // Check for nested structures like data.prices or data.results
-      if (!sizeSpecificPrices[brand]) {
-        for (const arrayKey of possibleSizeArrays) {
-          if (data[arrayKey] && typeof data[arrayKey] === 'object') {
-            const nestedData = data[arrayKey];
-            if (nestedData.sizes && Array.isArray(nestedData.sizes)) {
-              const validPrices = nestedData.sizes.filter(p => 
-                typeof p.price === 'number' && 
-                p.size && 
-                typeof p.size === 'string'
-              );
-              
-              if (validPrices.length > 0) {
-                sizeSpecificPrices[brand] = validPrices.map(p => ({
-                  size: p.size,
-                  price: p.price
-                }));
-                
-                validPrices.forEach(p => allSizes.add(p.size));
-                break;
-              }
-            }
-          }
-        }
-      }
-      
-      // Also check if the object itself contains size data
-      if (!sizeSpecificPrices[brand] && data.size && data.price) {
-        sizeSpecificPrices[brand] = [{
-          size: data.size,
-          price: data.price
-        }];
-        allSizes.add(data.size);
-      }
-      
-      // Check for alternative field names
-      if (!sizeSpecificPrices[brand]) {
-        const alternativeFields = ['ask', 'bid', 'lastSale', 'marketPrice'];
-        for (const field of alternativeFields) {
-          if (data[field] && typeof data[field] === 'object' && data[field].sizes) {
-            const validPrices = data[field].sizes.filter(p => 
-              typeof p.price === 'number' && 
-              p.size && 
-              typeof p.size === 'string'
-            );
-            
-            if (validPrices.length > 0) {
-              sizeSpecificPrices[brand] = validPrices.map(p => ({
-                size: p.size,
-                price: p.price
-              }));
-              
-              validPrices.forEach(p => allSizes.add(p.size));
-              break;
-            }
-          }
-        }
-      }
-    }
-  });
-
-  // Handle GOAT API response structure - check if we have product array
-  if (apiData?.product && Array.isArray(apiData.product)) {
-    console.log('Processing GOAT product array with', apiData.product.length, 'entries');
-    
-    const goatPrices = [];
-    const goatSizes = new Set();
-    
-    apiData.product.forEach(product => {
-      if (product.size && product.lowest_price_cents_usd) {
-        const size = product.size.toString();
-        const price = product.lowest_price_cents_usd / 100; // Convert cents to dollars
-        
-        goatPrices.push({ size, price });
-        goatSizes.add(size);
-        allSizes.add(size);
-      }
-    });
-    
-    if (goatPrices.length > 0) {
-      sizeSpecificPrices.goat = goatPrices;
-      console.log(`Extracted ${goatPrices.length} GOAT size-specific prices`);
-    }
-  }
-
-  // Handle GOAT data from resellPrices.goat array
-  if (prices.goat && Array.isArray(prices.goat)) {
-    console.log('Processing GOAT resellPrices array with', prices.goat.length, 'entries');
-    
-    const goatPrices = [];
-    prices.goat.forEach(item => {
-      if (item.size && item.lowestPrice) {
-        const size = item.size.toString();
-        const price = item.lowestPrice;
-        
-        goatPrices.push({ size, price });
-        allSizes.add(size);
-      }
-    });
-    
-    if (goatPrices.length > 0) {
-      sizeSpecificPrices.goat = goatPrices;
-      console.log(`Extracted ${goatPrices.length} GOAT size-specific prices from resellPrices`);
-    }
-  }
-
-  // Handle Flight Club data from resellPrices.flightClub.newSizes array
-  if (prices.flightClub && prices.flightClub.newSizes && Array.isArray(prices.flightClub.newSizes)) {
-    console.log('Processing Flight Club newSizes array with', prices.flightClub.newSizes.length, 'entries');
-    
-    const flightClubPrices = [];
-    prices.flightClub.newSizes.forEach(item => {
-      if (item.size && item.size.value && item.lowestPriceOption && item.lowestPriceOption.price) {
-        const size = item.size.value.toString();
-        const price = item.lowestPriceOption.price;
-        
-        flightClubPrices.push({ size, price });
-        allSizes.add(size);
-      }
-    });
-    
-    if (flightClubPrices.length > 0) {
-      sizeSpecificPrices.flightClub = flightClubPrices;
-      console.log(`Extracted ${flightClubPrices.length} Flight Club size-specific prices`);
-    }
-  }
-
-  // Convert Set to sorted array
-  const availableSizes = Array.from(allSizes).sort((a, b) => {
-    const aNum = parseFloat(a);
-    const bNum = parseFloat(b);
-    return aNum - bNum;
-  });
-
-  console.log('Extracted size-specific prices keys:', Object.keys(sizeSpecificPrices));
-  console.log('Available sizes count:', availableSizes.length);
-
-  // Only use real size data from the API responses
-  // No sample data generation - only display actual available sizes and prices
-
-  // Additional debugging - log what we actually extracted
-  console.log('Final extracted data:');
-  console.log('- Available sizes:', availableSizes);
-  console.log('- Size-specific prices:', Object.keys(sizeSpecificPrices).map(platform => 
-    `${platform}: ${sizeSpecificPrices[platform]?.length || 0} entries`
-  ));
-  console.log('- Resell prices:', Object.keys(resellPrices).map(platform => 
-    `${platform}: ${resellPrices[platform] || 'null'}`
-  ));
 
   return {
     lowest_resell_prices: {
@@ -321,13 +89,6 @@ function normalizeResellData(apiData) {
       flightClub: resellPrices.flightClub || null,
       stadiumGoods: resellPrices.stadiumGoods || null,
     },
-    size_specific_prices: {
-      stockX: sizeSpecificPrices.stockX || [],
-      goat: sizeSpecificPrices.goat || [],
-      flightClub: sizeSpecificPrices.flightClub || [],
-      stadiumGoods: sizeSpecificPrices.stadiumGoods || []
-    },
-    available_sizes: availableSizes,
     resell_links: {
       stockX: links.stockX || '',
       goat: links.goat || '',
@@ -393,9 +154,6 @@ app.get('/shoes/:query', async (req, res) => {
 
         if (skuRes.data) {
           const resellData = normalizeResellData(skuRes.data);
-          basicResults[0] = {...basicResults[0], ...resellData};
-          
-          // Add debug information to the response
           basicResults[0] = { ...basicResults[0], ...resellData };
         }
       } catch (err) {
@@ -507,7 +265,7 @@ protectedRouter.post('/shoe-size', async (req, res) => {
   }
 });
 
-// Get user's brand preferences (protected routes)
+// Get user's brand preferences (protected route)
 protectedRouter.get('/user-preferences', async (req, res) => {
   try {
     const user = await getUser(req.auth0Id);
@@ -607,73 +365,6 @@ protectedRouter.get('/auth-check', (req, res) => {
   });
 });
 
-// Debug endpoint to test API response structure
-app.get('/debug-api/:query', async (req, res) => {
-  const query = req.params.query;
-  
-  try {
-    const retailOptions = {
-      method: 'GET',
-      url: `https://${process.env.STOCKX_API_HOST}/search?query=${encodeURIComponent(query)}`,
-      headers: {
-        'X-RapidAPI-Key': process.env.STOCKX_API_KEY,
-        'X-RapidAPI-Host': process.env.STOCKX_API_HOST
-      }
-    };
-
-    const retailRes = await retryRequest(retailOptions);
-    if (!retailRes.data?.hits) return res.status(404).json({ error: 'No shoes found.' });
-
-    const shoes = retailRes.data.hits.slice(0, 1);
-    
-    if (shoes[0]?.sku) {
-      try {
-        const skuRes = await retryRequest({
-          method: 'GET',
-          url: `https://${process.env.SNEAKER_DB_API_HOST}/productprice`,
-          params: { styleId: shoes[0].sku },
-          headers: {
-            'X-RapidAPI-Key': process.env.SNEAKER_DB_API_KEY,
-            'X-RapidAPI-Host': process.env.SNEAKER_DB_API_HOST,
-          },
-        });
-
-        if (skuRes.data) {
-          res.json({
-            rawApiResponse: skuRes.data,
-            normalizedData: normalizeResellData(skuRes.data)
-          });
-        } else {
-          res.json({ error: 'No API data received' });
-        }
-      } catch (err) {
-        res.status(500).json({ error: 'API call failed', details: err.message });
-      }
-    } else {
-      res.status(404).json({ error: 'No SKU found for shoe' });
-    }
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch data', details: err.message });
-  }
-});
-
-  // Recommendation endpoint: suggest shoes based on user's preferences or favorite brands
-  protectedRouter.get('/recommendations', async (req, res) => {
-    try {
-      // Get user's preferences first
-      const user = await getUser(req.auth0Id);
-      let brandsToUse = [];
-      
-      if (user?.preferences && user.preferences.length > 0) {
-        // Use user-selected preferences if available
-        brandsToUse = user.preferences;
-        logger.info(`Using user preferences for recommendations: ${brandsToUse.join(', ')}`);
-      } else {
-        // Fall back to extracting brands from favorites
-        const favorites = await getUserFavorites(req.auth0Id);
-        if (!favorites || favorites.length === 0) {
-          return res.status(200).json({ recommendations: [], message: 'No preferences or favorites found for user.' });
-        }
 // Recommendation endpoint: suggest shoes based on user's preferences or favorite brands
 protectedRouter.get('/recommendations', async (req, res) => {
   try {
